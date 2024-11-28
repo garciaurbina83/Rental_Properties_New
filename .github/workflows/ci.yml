@@ -51,8 +51,10 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         file: ./backend/coverage.xml
         flags: backend
+        fail_ci_if_error: true
 
   frontend-test:
     runs-on: ubuntu-latest
@@ -79,8 +81,10 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         file: ./frontend/coverage/coverage-final.json
         flags: frontend
+        fail_ci_if_error: true
 
   lint:
     runs-on: ubuntu-latest
