@@ -105,7 +105,7 @@ def custom_openapi():
         routes=app.routes,
     )
 
-    # Agregar componentes de seguridad
+    # Agregar componentes de seguridad y schemas
     openapi_schema["components"] = {
         "securitySchemes": {
             "BearerAuth": {
@@ -121,7 +121,8 @@ def custom_openapi():
                 3. Úsalo en el formato: Bearer <token>
                 """
             }
-        }
+        },
+        "schemas": {}  # Los schemas se agregarán automáticamente
     }
 
     # Aplicar seguridad globalmente

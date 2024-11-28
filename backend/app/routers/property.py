@@ -50,6 +50,28 @@ async def get_properties(
     Crea una nueva propiedad en el sistema.
     Requiere el permiso 'property:write'.
     """,
+    responses={
+        201: {
+            "description": "Propiedad creada exitosamente",
+            "model": Property
+        },
+        422: {
+            "description": "Error de validación",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": [
+                            {
+                                "loc": ["body", "name"],
+                                "msg": "field required",
+                                "type": "value_error.missing"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
 )
 async def create_property(
     property_data: PropertyCreate,
@@ -60,7 +82,7 @@ async def create_property(
     """
     Crea una nueva propiedad.
     """
-    return property_service.create_property(db, property_data)
+    return property_service.create_property(db, property_data, current_user["id"])
 
 @router.get(
     "/properties/{property_id}",
