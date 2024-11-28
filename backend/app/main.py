@@ -12,43 +12,45 @@ from fastapi.security import HTTPBearer
 
 from .core.config import settings
 from .routers import property, auth
-from .core.database import create_tables
 from datetime import datetime
 
 # Crear la aplicación FastAPI
 app = FastAPI(
     title=settings.APP_NAME,
+    version=settings.APP_VERSION,
     description="""
     # API de Gestión de Propiedades en Alquiler
 
-    Esta API proporciona endpoints para gestionar:
+    Esta API proporciona endpoints para gestionar propiedades en alquiler, incluyendo:
     
-    * Propiedades: Registro y gestión de propiedades
-    * Inquilinos: Información y gestión de inquilinos
-    * Contratos: Contratos de alquiler
-    * Pagos: Registro y seguimiento de pagos
-    * Mantenimiento: Solicitudes y seguimiento de mantenimiento
-
-    ## Autenticación
-
-    Esta API utiliza autenticación JWT a través de Clerk. Para autenticarte:
-
-    1. Obtén un token JWT desde Clerk
-    2. Haz clic en el botón "Authorize" arriba
-    3. Ingresa tu token en el formato: `Bearer <tu-token>`
-    4. Los endpoints protegidos ahora estarán disponibles
-
-    ## Paginación
-
-    Los endpoints que devuelven listas soportan paginación a través de los parámetros `skip` y `limit`.
-
-    ## Documentación Adicional
-
-    * [Términos de Servicio](https://example.com/terms)
-    * [Documentación Externa](https://example.com/docs)
-    * [Contacto de Soporte](mailto:support@example.com)
+    * Gestión de propiedades
+    * Gestión de inquilinos
+    * Gestión de contratos
+    * Gestión de pagos
+    * Autenticación y autorización
+    * Reportes y análisis
+    
+    ## Características principales
+    
+    * Autenticación JWT
+    * Documentación interactiva
+    * Validación de datos
+    * Manejo de errores consistente
+    * Paginación y filtrado
+    * Caché con Redis
+    * Monitoreo y logging
+    
+    ## Tecnologías utilizadas
+    
+    * FastAPI
+    * PostgreSQL
+    * SQLAlchemy
+    * Pydantic
+    * Redis
+    * Alembic
+    * JWT
+    * OpenAPI (Swagger)
     """,
-    version=settings.APP_VERSION,
     terms_of_service="https://example.com/terms/",
     contact={
         "name": "Soporte Técnico",
@@ -60,8 +62,8 @@ app = FastAPI(
         "url": "https://opensource.org/licenses/MIT",
     },
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    docs_url=None,
-    redoc_url=None,
+    docs_url=f"{settings.API_V1_STR}/docs",
+    redoc_url=f"{settings.API_V1_STR}/redoc",
 )
 
 # Montar archivos estáticos
@@ -219,4 +221,4 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 async def startup_event():
     """Initialize application resources"""
-    create_tables()
+    pass

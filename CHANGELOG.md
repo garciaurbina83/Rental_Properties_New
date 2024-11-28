@@ -17,10 +17,17 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
   - Added integration and E2E test examples
   - Configured pytest with custom markers
   - Added Selenium setup for E2E testing
+  - Added unit tests for Settings module
 - Requirements organization
   - Moved to a hierarchical requirements structure
   - Added development dependencies in `requirements-dev.txt`
   - Centralized project dependencies in root `requirements.txt`
+
+### Changed
+- Simplificación de la clase Settings
+  - Migración de Pydantic a dataclasses para una validación más simple
+  - Manejo consistente de variables de entorno en `__post_init__`
+  - Mejora en la organización del código de configuración
 
 ### Backend
 - API RESTful con FastAPI

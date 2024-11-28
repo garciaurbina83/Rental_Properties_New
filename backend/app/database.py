@@ -1,20 +1,28 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-import os
-from dotenv import load_dotenv
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import DeclarativeBase
+from .core.config import settings
 
-load_dotenv()
+class Base(DeclarativeBase):
+    pass
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+# Create engine with connection pooling
+engine = create_engine(
+    settings.DATABASE_URL,
+    pool_pre_ping=True,  # Enable connection health check
+    pool_size=5,         # Connection pool size
+    max_overflow=10      # Maximum number of additional connections
+)
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-Base = declarative_base()
+def create_tables():
+    """Create all tables in the database"""
+    Base.metadata.create_all(bind=engine)
 
 # Dependency
-def get_db():
+def get_db() -> Session:
     db = SessionLocal()
     try:
         yield db

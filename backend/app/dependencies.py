@@ -1,53 +1,52 @@
-from typing import Generator, Optional
-from fastapi import Depends, HTTPException, status
+"""
+Dependencies for FastAPI application
+"""
+from typing import AsyncGenerator, Optional, Tuple
+from fastapi import Depends, HTTPException, status, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .core.database import SessionLocal
 from .core.security import verify_token
-from .core.config import settings
+from .core.settings import Settings
 
+settings = Settings()
 security = HTTPBearer()
 
-def get_db() -> Generator[Session, None, None]:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
-    Dependency for getting database session
+    Dependency function that yields db sessions
     """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    async with SessionLocal() as session:
+        yield session
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> dict:
     """
     Dependency for getting current authenticated user
     """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
     if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise credentials_exception
     
     token = credentials.credentials
-    user_data = await verify_token(token)
+    user = await verify_token(token)
     
-    if not user_data:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    return user_data
+    if not user:
+        raise credentials_exception
+        
+    return user
 
 async def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Optional[dict]:
     """
     Dependency for getting current user if token is provided, otherwise None
@@ -55,43 +54,17 @@ async def get_optional_user(
     if not credentials:
         return None
     
-    try:
-        token = credentials.credentials
-        user_data = await verify_token(token)
-        return user_data
-    except:
-        return None
+    token = credentials.credentials
+    user = await verify_token(token)
+    return user
 
-def check_admin_access(current_user: dict = Depends(get_current_user)) -> None:
+def get_pagination_params(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Number of items per page")
+) -> Tuple[int, int]:
     """
-    Dependency for checking admin access
+    Get pagination parameters
+    Returns tuple of (skip, limit)
     """
-    if not current_user.get("is_admin", False):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user doesn't have enough privileges"
-        )
-
-def pagination_params(
-    skip: int = 0,
-    limit: int = settings.DEFAULT_PAGINATION_LIMIT
-) -> tuple[int, int]:
-    """
-    Dependency for pagination parameters
-    """
-    if skip < 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Skip parameter must be non-negative"
-        )
-    
-    if limit < settings.MIN_PAGINATION_LIMIT:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Limit parameter must be greater than or equal to {settings.MIN_PAGINATION_LIMIT}"
-        )
-    
-    if limit > settings.MAX_PAGINATION_LIMIT:
-        limit = settings.MAX_PAGINATION_LIMIT
-    
-    return skip, limit
+    skip = (page - 1) * page_size
+    return skip, page_size

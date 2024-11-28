@@ -1,14 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
-from .base import BaseSchema
-from enum import Enum
-
-class PropertyStatus(str, Enum):
-    AVAILABLE = "available"
-    RENTED = "rented"
-    MAINTENANCE = "maintenance"
-    INACTIVE = "inactive"
+from ..models.property import PropertyStatus
 
 class PropertyBase(BaseModel):
     """Base schema for property data"""
@@ -32,6 +25,7 @@ class PropertyBase(BaseModel):
     is_active: bool = Field(True, description="Indica si la propiedad está activa")
 
     model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra={
             "example": {
                 "name": "Casa Moderna Centro",
@@ -55,7 +49,7 @@ class PropertyBase(BaseModel):
 
 class PropertyCreate(PropertyBase):
     """Schema for creating a new property"""
-    pass
+    model_config = ConfigDict(from_attributes=True)
 
 class PropertyUpdate(BaseModel):
     """Schema for updating an existing property"""
@@ -75,15 +69,18 @@ class PropertyUpdate(BaseModel):
     status: Optional[PropertyStatus] = Field(None, description="Estado actual de la propiedad")
     is_active: Optional[bool] = Field(None, description="Indica si la propiedad está activa")
 
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "name": "Casa Moderna Centro Actualizada",
-            "monthly_rent": 2600.00,
-            "status": "rented"
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "name": "Casa Moderna Centro Actualizada",
+                "monthly_rent": 2600.00,
+                "status": "rented"
+            }
         }
-    })
+    )
 
-class Property(PropertyBase, BaseSchema):
+class Property(PropertyBase):
     """Schema for property responses"""
     id: int = Field(..., description="ID único de la propiedad")
     user_id: str = Field(..., description="ID del propietario")
@@ -96,27 +93,40 @@ class PropertyFilter(BaseModel):
     """Schema for filtering properties"""
     city: Optional[str] = Field(None, description="Filtrar por ciudad")
     state: Optional[str] = Field(None, description="Filtrar por estado")
-    min_price: Optional[float] = Field(None, ge=0, description="Precio mínimo")
-    max_price: Optional[float] = Field(None, ge=0, description="Precio máximo")
-    min_size: Optional[float] = Field(None, ge=0, description="Tamaño mínimo")
-    max_size: Optional[float] = Field(None, ge=0, description="Tamaño máximo")
-    bedrooms: Optional[int] = Field(None, ge=0, description="Número de habitaciones")
-    bathrooms: Optional[float] = Field(None, ge=0, description="Número de baños")
+    min_price: Optional[float] = Field(None, ge=0, description="Precio mínimo de renta")
+    max_price: Optional[float] = Field(None, ge=0, description="Precio máximo de renta")
+    bedrooms: Optional[int] = Field(None, ge=0, description="Número mínimo de habitaciones")
+    bathrooms: Optional[float] = Field(None, ge=0, description="Número mínimo de baños")
     status: Optional[PropertyStatus] = Field(None, description="Estado de la propiedad")
     is_active: Optional[bool] = Field(None, description="Estado activo/inactivo")
 
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "city": "Ciudad de México",
-            "min_price": 2000.00,
-            "max_price": 3000.00,
-            "bedrooms": 2,
-            "status": "available"
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "city": "Ciudad de México",
+                "min_price": 2000.00,
+                "max_price": 3000.00,
+                "bedrooms": 2,
+                "status": "available"
+            }
         }
-    })
+    )
 
-class PropertyDetail(Property):
-    contracts: List["ContractBase"] = []
-    maintenance_tickets: List["MaintenanceTicketBase"] = []
-    expenses: List["ExpenseBase"] = []
-    loans: List["LoanBase"] = []
+class PropertyBulkUpdate(BaseModel):
+    """Schema for bulk updating properties"""
+    ids: List[int] = Field(..., description="Lista de IDs de propiedades a actualizar")
+    update: PropertyUpdate = Field(..., description="Datos a actualizar")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "ids": [1, 2, 3],
+                "update": {
+                    "status": "maintenance",
+                    "is_active": False
+                }
+            }
+        }
+    )

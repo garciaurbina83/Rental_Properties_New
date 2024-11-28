@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from .base import BaseModel
 import enum
 
-class PropertyStatus(enum.Enum):
+class PropertyStatus(str, enum.Enum):
     AVAILABLE = "available"
     RENTED = "rented"
     MAINTENANCE = "maintenance"

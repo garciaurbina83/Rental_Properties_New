@@ -1,13 +1,14 @@
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_, func, select
 from typing import List, Optional, Dict, Any
 from datetime import date, datetime
 from ..models.property import Property, PropertyStatus
 from ..schemas.property import PropertyCreate, PropertyUpdate
 from fastapi import HTTPException, status
 
-def get_properties(
-    db: Session,
+async def get_properties(
+    db: AsyncSession,
     skip: int = 0,
     limit: int = 100,
     filters: Optional[Dict[str, Any]] = None
@@ -15,104 +16,199 @@ def get_properties(
     """
     Obtiene una lista de propiedades con filtros opcionales
     """
-    query = db.query(Property)
+    query = select(Property).where(Property.is_active == True)
     
     if filters:
+        conditions = []
         if 'status' in filters:
-            query = query.filter(Property.status == filters['status'])
+            try:
+                status_enum = PropertyStatus(filters['status'].lower())
+                conditions.append(Property.status == status_enum)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Invalid status value. Must be one of: {[s.value for s in PropertyStatus]}"
+                )
         if 'city' in filters:
-            query = query.filter(Property.city.ilike(f"%{filters['city']}%"))
+            conditions.append(Property.city.ilike(f"%{filters['city']}%"))
         if 'min_price' in filters:
-            query = query.filter(Property.monthly_rent >= filters['min_price'])
+            conditions.append(Property.monthly_rent >= filters['min_price'])
         if 'max_price' in filters:
-            query = query.filter(Property.monthly_rent <= filters['max_price'])
+            conditions.append(Property.monthly_rent <= filters['max_price'])
         if 'bedrooms' in filters:
-            query = query.filter(Property.bedrooms >= filters['bedrooms'])
+            conditions.append(Property.bedrooms >= filters['bedrooms'])
         if 'bathrooms' in filters:
-            query = query.filter(Property.bathrooms >= filters['bathrooms'])
-        if 'is_active' in filters:
-            query = query.filter(Property.is_active == filters['is_active'])
+            conditions.append(Property.bathrooms >= filters['bathrooms'])
+        if conditions:
+            query = query.where(and_(*conditions))
     
-    return query.offset(skip).limit(limit).all()
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
 
-def get_property(db: Session, property_id: int) -> Optional[Property]:
+async def get_property(db: AsyncSession, property_id: int) -> Optional[Property]:
     """
     Obtiene una propiedad por su ID
     """
-    return db.query(Property).filter(Property.id == property_id).first()
+    query = select(Property).where(
+        and_(
+            Property.id == property_id,
+            Property.is_active == True
+        )
+    )
+    result = await db.execute(query)
+    property = result.scalar_one_or_none()
+    if not property:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Property not found"
+        )
+    return property
 
-def create_property(db: Session, property: PropertyCreate) -> Property:
+async def create_property(db: AsyncSession, property: PropertyCreate, user_id: str) -> Property:
     """
     Crea una nueva propiedad
     """
-    db_property = Property(**property.model_dump())
-    db.add(db_property)
     try:
-        db.commit()
-        db.refresh(db_property)
+        property_dict = property.model_dump()
+        
+        # Ensure status is properly set as enum
+        if isinstance(property_dict.get('status'), str):
+            try:
+                property_dict['status'] = PropertyStatus(property_dict['status'].lower())
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Invalid status value. Must be one of: {[s.value for s in PropertyStatus]}"
+                )
+        
+        db_property = Property(**property_dict, user_id=user_id)
+        db.add(db_property)
+        await db.commit()
+        await db.refresh(db_property)
         return db_property
+        
+    except HTTPException:
+        await db.rollback()
+        raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error creating property: {str(e)}"
+            detail=str(e)
         )
 
-def update_property(
-    db: Session,
+async def update_property(
+    db: AsyncSession,
     property_id: int,
     property_update: PropertyUpdate
 ) -> Optional[Property]:
     """
     Actualiza una propiedad existente
     """
-    db_property = get_property(db, property_id)
-    if db_property:
+    db_property = await get_property(db, property_id)
+    if not db_property:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Property not found"
+        )
+    
+    try:
         update_data = property_update.model_dump(exclude_unset=True)
+        
+        # Handle status update
+        if 'status' in update_data and isinstance(update_data['status'], str):
+            try:
+                update_data['status'] = PropertyStatus(update_data['status'].lower())
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Invalid status value. Must be one of: {[s.value for s in PropertyStatus]}"
+                )
+        
         for field, value in update_data.items():
             setattr(db_property, field, value)
-        try:
-            db.commit()
-            db.refresh(db_property)
-            return db_property
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Error updating property: {str(e)}"
-            )
-    return None
+            
+        await db.commit()
+        await db.refresh(db_property)
+        return db_property
+        
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
-def delete_property(db: Session, property_id: int) -> bool:
+async def delete_property(db: AsyncSession, property_id: int) -> bool:
     """
     Elimina una propiedad (soft delete)
     """
-    db_property = get_property(db, property_id)
-    if db_property:
-        try:
-            db_property.is_active = False
-            db_property.status = PropertyStatus.INACTIVE
-            db.commit()
-            return True
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Error deleting property: {str(e)}"
-            )
-    return False
+    query = select(Property).where(
+        and_(
+            Property.id == property_id,
+            Property.is_active == True
+        )
+    )
+    result = await db.execute(query)
+    db_property = result.scalar_one_or_none()
+    
+    if not db_property:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Property not found"
+        )
+    
+    try:
+        db_property.is_active = False
+        db_property.status = PropertyStatus.INACTIVE
+        await db.commit()
+        return True
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error deleting property: {str(e)}"
+        )
 
-def get_property_metrics(db: Session) -> Dict[str, Any]:
+async def get_property_metrics(db: AsyncSession) -> Dict[str, Any]:
     """
     Obtiene métricas de las propiedades
     """
-    total_properties = db.query(func.count(Property.id)).scalar()
-    available_properties = db.query(func.count(Property.id))\
-        .filter(Property.status == PropertyStatus.AVAILABLE).scalar()
-    rented_properties = db.query(func.count(Property.id))\
-        .filter(Property.status == PropertyStatus.RENTED).scalar()
-    avg_rent = db.query(func.avg(Property.monthly_rent))\
-        .filter(Property.monthly_rent > 0).scalar()
+    total_properties = await db.scalar(
+        select(func.count(Property.id))\
+        .where(Property.is_active == True)
+    )
+    available_properties = await db.scalar(
+        select(func.count(Property.id))\
+        .where(
+            and_(
+                Property.is_active == True,
+                Property.status == PropertyStatus.AVAILABLE
+            )
+        )
+    )
+    rented_properties = await db.scalar(
+        select(func.count(Property.id))\
+        .where(
+            and_(
+                Property.is_active == True,
+                Property.status == PropertyStatus.RENTED
+            )
+        )
+    )
+    avg_rent = await db.scalar(
+        select(func.avg(Property.monthly_rent))\
+        .where(
+            and_(
+                Property.is_active == True,
+                Property.monthly_rent > 0
+            )
+        )
+    )
     
     return {
         "total_properties": total_properties,
@@ -122,8 +218,8 @@ def get_property_metrics(db: Session) -> Dict[str, Any]:
         "occupancy_rate": round((rented_properties / total_properties * 100), 2) if total_properties > 0 else 0
     }
 
-def search_properties(
-    db: Session,
+async def search_properties(
+    db: AsyncSession,
     search_term: str,
     skip: int = 0,
     limit: int = 100
@@ -131,7 +227,7 @@ def search_properties(
     """
     Búsqueda de propiedades por término
     """
-    return db.query(Property).filter(
+    query = select(Property).where(
         and_(
             Property.is_active == True,
             or_(
@@ -141,10 +237,13 @@ def search_properties(
                 Property.state.ilike(f"%{search_term}%")
             )
         )
-    ).offset(skip).limit(limit).all()
+    ).offset(skip).limit(limit)
+    
+    result = await db.execute(query)
+    return result.scalars().all()
 
-def get_properties_by_status(
-    db: Session,
+async def get_properties_by_status(
+    db: AsyncSession,
     status: PropertyStatus,
     skip: int = 0,
     limit: int = 100
@@ -152,31 +251,39 @@ def get_properties_by_status(
     """
     Obtiene propiedades por estado
     """
-    return db.query(Property)\
-        .filter(Property.status == status)\
-        .offset(skip)\
-        .limit(limit)\
-        .all()
+    query = select(Property).where(
+        and_(
+            Property.is_active == True,
+            Property.status == status
+        )
+    ).offset(skip).limit(limit)
+    
+    result = await db.execute(query)
+    return result.scalars().all()
 
-def update_property_status(
-    db: Session,
+async def update_property_status(
+    db: AsyncSession,
     property_id: int,
     new_status: PropertyStatus
 ) -> Optional[Property]:
     """
     Actualiza el estado de una propiedad
     """
-    db_property = get_property(db, property_id)
-    if db_property:
-        try:
-            db_property.status = new_status
-            db.commit()
-            db.refresh(db_property)
-            return db_property
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Error updating property status: {str(e)}"
-            )
-    return None
+    db_property = await get_property(db, property_id)
+    if not db_property:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Property not found"
+        )
+    
+    try:
+        db_property.status = new_status
+        await db.commit()
+        await db.refresh(db_property)
+        return db_property
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error updating property status: {str(e)}"
+        )

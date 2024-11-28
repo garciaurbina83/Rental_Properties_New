@@ -1,130 +1,139 @@
 """
-Configuración de pruebas para pytest.
-Define fixtures y configuraciones comunes para todas las pruebas.
+Pytest configuration file
 """
-
-import os
+import asyncio
+from datetime import datetime, timezone
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator, Generator, Dict
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.pool import NullPool
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 
+from app.core.settings import Settings
+from app.core.database import get_db
 from app.main import app
-from app.core.config import settings
-from app.core.database import Base, get_db
-from app.core.security import create_test_token
+from app.models.base import Base
+from app.core.test_auth import create_test_token
 
-# Configurar base de datos de prueba
-TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/test_db"
-engine = create_async_engine(TEST_DATABASE_URL, echo=True)
-TestingSessionLocal = sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
+settings = Settings()
+
+# Create async engine for testing
+# Ensure we're using asyncpg driver
+test_engine = create_async_engine(
+    settings.database_test_url.replace("postgresql://", "postgresql+asyncpg://"),
+    poolclass=NullPool,
+    echo=settings.debug
+)
+
+# Create async session factory
+test_async_session = async_sessionmaker(
+    test_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False
 )
 
 @pytest.fixture(scope="session")
-def event_loop():
-    """Crear un event loop para pruebas asíncronas"""
-    import asyncio
+def event_loop() -> Generator:
+    """Create an instance of the default event loop for the test session."""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
 
 @pytest.fixture(scope="session")
-async def test_db():
-    """Crear y configurar base de datos de prueba"""
-    async with engine.begin() as conn:
+async def db_engine():
+    """Yield the SQLAlchemy engine"""
+    async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    
-    yield engine
-    
-    async with engine.begin() as conn:
+    yield test_engine
+    async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
-@pytest.fixture
-async def db_session(test_db) -> AsyncGenerator[AsyncSession, None]:
-    """Proporcionar una sesión de base de datos para las pruebas"""
-    async with TestingSessionLocal() as session:
-        yield session
-        await session.rollback()
+@pytest.fixture(scope="function")
+async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
+    """Yield a SQLAlchemy session"""
+    async with test_async_session() as session:
+        try:
+            yield session
+            await session.rollback()
+        finally:
+            await session.close()
 
-@pytest.fixture
-async def client(db_session) -> Generator:
-    """Crear un cliente de prueba para la API"""
-    async def override_get_db():
-        yield db_session
+@pytest.fixture(scope="function")
+async def client(db_session: AsyncSession, auth_headers: Dict[str, str]) -> AsyncGenerator[AsyncClient, None]:
+    """Yield a test client with a clean database session"""
+    async def _get_test_db():
+        try:
+            yield db_session
+        finally:
+            await db_session.close()
 
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
-        yield test_client
+    app.dependency_overrides[get_db] = _get_test_db
+
+    async with AsyncClient(
+        app=app,
+        base_url="http://localhost:8000",
+        headers=auth_headers,
+        follow_redirects=True
+    ) as client:
+        yield client
+
     app.dependency_overrides.clear()
 
 @pytest.fixture
-def test_user():
-    """Proporcionar datos de usuario de prueba"""
-    return {
-        "id": "test_user_id",
-        "email": "test@example.com",
-        "name": "Test User",
-        "roles": ["admin"]
-    }
-
-@pytest.fixture
-def auth_headers(test_user):
-    """Proporcionar headers de autenticación para las pruebas"""
-    token = create_test_token(test_user)
+def auth_headers() -> Dict[str, str]:
+    """Create authorization headers with a test token"""
+    token = create_test_token()
     return {"Authorization": f"Bearer {token}"}
 
 @pytest.fixture
-def test_property():
-    """Proporcionar datos de propiedad de prueba"""
+def test_property_data() -> Dict[str, any]:
+    """Get test property data"""
     return {
-        "title": "Test Property",
-        "description": "A test property",
+        "name": "Test Property",
         "address": "123 Test St",
-        "price": 1000.00,
+        "city": "Test City",
+        "state": "Test State",
+        "zip_code": "12345",
+        "country": "Test Country",
+        "size": 1000.0,
         "bedrooms": 2,
-        "bathrooms": 1,
-        "square_meters": 100
+        "bathrooms": 2.0,
+        "parking_spots": 1,
+        "purchase_price": 200000.0,
+        "current_value": 250000.0,
+        "monthly_rent": 1000.0,
+        "status": "available",
+        "is_active": True,
+        "user_id": "test_user"
     }
 
 @pytest.fixture
-def test_tenant():
-    """Proporcionar datos de inquilino de prueba"""
-    return {
-        "name": "Test Tenant",
-        "email": "tenant@example.com",
-        "phone": "1234567890",
-        "document_id": "ABC123"
+def selenium_driver(request):
+    """Create a Selenium WebDriver instance for e2e tests"""
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Run in headless mode
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    
+    driver = webdriver.Chrome(options=chrome_options)
+    yield driver
+    driver.quit()
+
+def pytest_collection_modifyitems(config, items):
+    """Modify test items in place to ensure test classes run in order."""
+    MARKS = {
+        "unit": pytest.mark.unit,
+        "integration": pytest.mark.integration,
+        "e2e": pytest.mark.e2e
     }
 
-@pytest.fixture
-def test_contract():
-    """Proporcionar datos de contrato de prueba"""
-    return {
-        "start_date": "2024-01-01",
-        "end_date": "2024-12-31",
-        "monthly_rent": 1000.00,
-        "deposit": 2000.00
-    }
-
-@pytest.fixture
-def test_payment():
-    """Proporcionar datos de pago de prueba"""
-    return {
-        "amount": 1000.00,
-        "payment_date": "2024-01-01",
-        "payment_method": "credit_card",
-        "status": "completed"
-    }
-
-@pytest.fixture
-def test_maintenance():
-    """Proporcionar datos de mantenimiento de prueba"""
-    return {
-        "title": "Test Maintenance",
-        "description": "A test maintenance request",
-        "priority": "high",
-        "status": "pending"
-    }
+    for item in items:
+        for name, mark in MARKS.items():
+            if name in item.keywords:
+                item.add_marker(mark)

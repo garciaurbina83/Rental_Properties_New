@@ -8,15 +8,17 @@ pytestmark = pytest.mark.e2e
 
 class TestPropertyManagement:
     @pytest.fixture(autouse=True)
-    def setup(self, selenium_driver: WebDriver):
+    def setup(self, selenium_driver: WebDriver, auth_headers: dict):
         self.driver = selenium_driver
         self.wait = WebDriverWait(self.driver, 10)
         # Navigate to the application
         self.driver.get("http://localhost:3000")
-        # Login if needed
-        # self.login()
+        # Add authentication headers
+        for name, value in auth_headers.items():
+            self.driver.add_cookie({"name": name, "value": value})
+        self.driver.refresh()
     
-    def test_create_new_property(self):
+    def test_create_new_property(self, test_property_data: dict):
         # Click on "Add Property" button
         add_button = self.wait.until(
             EC.element_to_be_clickable((By.ID, "add-property-button"))
@@ -24,9 +26,9 @@ class TestPropertyManagement:
         add_button.click()
         
         # Fill in the form
-        self.driver.find_element(By.NAME, "address").send_keys("123 Test St")
-        self.driver.find_element(By.NAME, "type").send_keys("Apartment")
-        self.driver.find_element(By.NAME, "rentAmount").send_keys("1000")
+        self.driver.find_element(By.NAME, "address").send_keys(test_property_data["address"])
+        self.driver.find_element(By.NAME, "type").send_keys(test_property_data["type"])
+        self.driver.find_element(By.NAME, "rentAmount").send_keys(str(test_property_data["rentAmount"]))
         
         # Submit the form
         submit_button = self.driver.find_element(By.ID, "submit-property")
@@ -42,14 +44,14 @@ class TestPropertyManagement:
         property_list = self.wait.until(
             EC.presence_of_element_located((By.ID, "property-list"))
         )
-        assert "123 Test St" in property_list.text
+        assert test_property_data["address"] in property_list.text
     
-    def test_search_property(self):
+    def test_search_property(self, test_property_data: dict):
         # Enter search term
         search_input = self.wait.until(
             EC.presence_of_element_located((By.ID, "property-search"))
         )
-        search_input.send_keys("123 Test St")
+        search_input.send_keys(test_property_data["address"])
         
         # Click search button
         search_button = self.driver.find_element(By.ID, "search-button")
@@ -59,9 +61,9 @@ class TestPropertyManagement:
         search_results = self.wait.until(
             EC.presence_of_element_located((By.ID, "search-results"))
         )
-        assert "123 Test St" in search_results.text
+        assert test_property_data["address"] in search_results.text
     
-    def test_update_property(self):
+    def test_update_property(self, test_property_data: dict):
         # Find and click edit button for the property
         edit_button = self.wait.until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, "[data-testid='edit-property']"))
@@ -73,7 +75,8 @@ class TestPropertyManagement:
             EC.presence_of_element_located((By.NAME, "rentAmount"))
         )
         rent_input.clear()
-        rent_input.send_keys("1200")
+        new_rent = test_property_data["rentAmount"] + 200
+        rent_input.send_keys(str(new_rent))
         
         # Save changes
         save_button = self.driver.find_element(By.ID, "save-changes")
@@ -89,4 +92,4 @@ class TestPropertyManagement:
         property_details = self.wait.until(
             EC.presence_of_element_located((By.CLASS_NAME, "property-details"))
         )
-        assert "$1,200" in property_details.text
+        assert f"${new_rent:,}" in property_details.text

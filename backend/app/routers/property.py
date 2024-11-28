@@ -1,13 +1,14 @@
 from typing import List, Optional, Dict
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body
+from sqlalchemy.ext.asyncio import AsyncSession
 from ..dependencies import get_db
 from ..services import property_service
 from ..schemas.property import (
     PropertyCreate,
     PropertyUpdate,
     Property,
-    PropertyFilter
+    PropertyFilter,
+    PropertyBulkUpdate
 )
 from ..core.security import get_current_user, check_permissions
 
@@ -24,7 +25,7 @@ router = APIRouter()
     """,
 )
 async def get_properties(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: Dict = Depends(get_current_user),
     _: Dict = Depends(check_permissions(["property:read"])),
     skip: int = Query(0, ge=0, description="Número de registros a saltar"),
@@ -34,7 +35,7 @@ async def get_properties(
     """
     Obtiene una lista de propiedades con filtros opcionales.
     """
-    return property_service.get_properties(
+    return await property_service.get_properties(
         db,
         skip=skip,
         limit=limit,
@@ -75,14 +76,14 @@ async def get_properties(
 )
 async def create_property(
     property_data: PropertyCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: Dict = Depends(get_current_user),
     _: Dict = Depends(check_permissions(["property:write"]))
 ):
     """
     Crea una nueva propiedad.
     """
-    return property_service.create_property(db, property_data, current_user["id"])
+    return await property_service.create_property(db, property_data, current_user["id"])
 
 @router.get(
     "/properties/{property_id}",
@@ -95,14 +96,14 @@ async def create_property(
 )
 async def get_property(
     property_id: int = Path(..., gt=0, description="ID de la propiedad"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: Dict = Depends(get_current_user),
     _: Dict = Depends(check_permissions(["property:read"]))
 ):
     """
     Obtiene una propiedad por su ID.
     """
-    property = property_service.get_property(db, property_id)
+    property = await property_service.get_property(db, property_id)
     if not property:
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
     return property
@@ -118,15 +119,15 @@ async def get_property(
 )
 async def update_property(
     property_id: int = Path(..., gt=0, description="ID de la propiedad"),
-    property_data: PropertyUpdate = Depends(),
-    db: Session = Depends(get_db),
+    property_data: PropertyUpdate = Body(...),
+    db: AsyncSession = Depends(get_db),
     current_user: Dict = Depends(get_current_user),
     _: Dict = Depends(check_permissions(["property:write"]))
 ):
     """
     Actualiza una propiedad existente.
     """
-    updated_property = property_service.update_property(db, property_id, property_data)
+    updated_property = await property_service.update_property(db, property_id, property_data)
     if not updated_property:
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
     return updated_property
@@ -142,15 +143,42 @@ async def update_property(
 )
 async def delete_property(
     property_id: int = Path(..., gt=0, description="ID de la propiedad"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: Dict = Depends(get_current_user),
     _: Dict = Depends(check_permissions(["property:delete"]))
 ):
     """
     Elimina una propiedad (soft delete).
     """
-    if not property_service.delete_property(db, property_id):
+    if not await property_service.delete_property(db, property_id):
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
+
+@router.put(
+    "/properties/bulk",
+    response_model=List[Property],
+    summary="Actualización masiva de propiedades",
+    description="""
+    Actualiza múltiples propiedades al mismo tiempo.
+    Requiere el permiso 'property:write'.
+    """,
+)
+async def bulk_update_properties(
+    update_data: PropertyBulkUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Dict = Depends(get_current_user),
+    _: Dict = Depends(check_permissions(["property:write"]))
+):
+    """
+    Actualiza múltiples propiedades en masa.
+    """
+    updated_properties = []
+    for property_id in update_data.ids:
+        updated_property = await property_service.update_property(
+            db, property_id, update_data.update
+        )
+        if updated_property:
+            updated_properties.append(updated_property)
+    return updated_properties
 
 @router.get(
     "/properties/metrics",
@@ -161,14 +189,14 @@ async def delete_property(
     """,
 )
 async def get_property_metrics(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: Dict = Depends(get_current_user),
     _: Dict = Depends(check_permissions(["property:read"]))
 ):
     """
     Obtiene métricas de las propiedades.
     """
-    return property_service.get_property_metrics(db)
+    return await property_service.get_property_metrics(db)
 
 @router.get(
     "/properties/search",
@@ -181,7 +209,7 @@ async def get_property_metrics(
 )
 async def search_properties(
     q: str = Query(..., min_length=2, description="Término de búsqueda"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: Dict = Depends(get_current_user),
     _: Dict = Depends(check_permissions(["property:read"])),
     skip: int = Query(0, ge=0),
@@ -190,28 +218,4 @@ async def search_properties(
     """
     Busca propiedades por término.
     """
-    return property_service.search_properties(db, q, skip=skip, limit=limit)
-
-@router.patch(
-    "/properties/{property_id}/status",
-    response_model=Property,
-    summary="Actualizar estado de propiedad",
-    description="""
-    Actualiza el estado de una propiedad.
-    Requiere el permiso 'property:write'.
-    """,
-)
-async def update_property_status(
-    property_id: int = Path(..., gt=0, description="ID de la propiedad"),
-    status: str = Query(..., description="Nuevo estado de la propiedad"),
-    db: Session = Depends(get_db),
-    current_user: Dict = Depends(get_current_user),
-    _: Dict = Depends(check_permissions(["property:write"]))
-):
-    """
-    Actualiza el estado de una propiedad.
-    """
-    updated_property = property_service.update_property_status(db, property_id, status)
-    if not updated_property:
-        raise HTTPException(status_code=404, detail="Propiedad no encontrada")
-    return updated_property
+    return await property_service.search_properties(db, q, skip=skip, limit=limit)
