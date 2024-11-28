@@ -26,6 +26,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -38,28 +40,34 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r backend/requirements.txt
         pip install -r requirements-dev.txt
+        pip install pytest-cov coverage
 
-    - name: Run tests
+    - name: Run tests with coverage
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/rental_properties_test
         SECRET_KEY: test_secret_key
         ENVIRONMENT: test
       run: |
         cd backend
-        pytest -v --cov=app --cov-report=xml
+        pytest --cov=app --cov-report=xml --cov-report=term-missing:skip-covered
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./backend/coverage.xml
+        files: ./backend/coverage.xml
         flags: backend
+        name: backend-python
         fail_ci_if_error: true
+        verbose: true
+        codecov_curl_args: "-v"
 
   frontend-test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
 
     - name: Set up Node.js
       uses: actions/setup-node@v3
@@ -73,18 +81,46 @@ jobs:
         cd frontend
         npm ci
 
-    - name: Run tests
+    - name: Run tests with coverage
       run: |
         cd frontend
-        npm test -- --coverage
+        npm test -- --coverage --watchAll=false --ci
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./frontend/coverage/coverage-final.json
+        files: ./frontend/coverage/coverage-final.json
         flags: frontend
+        name: frontend-typescript
         fail_ci_if_error: true
+        verbose: true
+        codecov_curl_args: "-v"
+
+  coverage-report:
+    needs: [backend-test, frontend-test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download all coverage reports
+        uses: actions/download-artifact@v3
+        with:
+          path: coverage-reports
+
+      - name: Display coverage report structure
+        run: ls -R coverage-reports
+
+      - name: Generate combined coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-reports/**/*.xml,coverage-reports/**/*.json
+          flags: combined
+          name: combined-coverage
+          fail_ci_if_error: true
+          verbose: true
+          codecov_curl_args: "-v"
 
   lint:
     runs-on: ubuntu-latest
