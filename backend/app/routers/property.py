@@ -90,6 +90,33 @@ async def create_property(
         print(f"Error creating property: {str(e)}")
         raise
 
+@router.put(
+    "/properties/bulk",
+    response_model=List[Property],
+    summary="Actualización masiva de propiedades",
+    description="""
+    Actualiza múltiples propiedades al mismo tiempo.
+    Requiere el permiso 'property:write'.
+    """,
+)
+async def bulk_update_properties(
+    update_data: PropertyBulkUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Dict = Depends(get_current_user),
+    _: Dict = Depends(check_permissions(["property:write"]))
+):
+    """
+    Actualiza múltiples propiedades en masa.
+    """
+    updated_properties = []
+    for property_id in update_data.ids:
+        updated_property = await property_service.update_property(
+            db, property_id, update_data.update
+        )
+        if updated_property:
+            updated_properties.append(updated_property)
+    return updated_properties
+
 @router.get(
     "/properties/{property_id}",
     response_model=Property,
@@ -157,33 +184,6 @@ async def delete_property(
     """
     if not await property_service.delete_property(db, property_id):
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
-
-@router.put(
-    "/properties/bulk",
-    response_model=List[Property],
-    summary="Actualización masiva de propiedades",
-    description="""
-    Actualiza múltiples propiedades al mismo tiempo.
-    Requiere el permiso 'property:write'.
-    """,
-)
-async def bulk_update_properties(
-    update_data: PropertyBulkUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: Dict = Depends(get_current_user),
-    _: Dict = Depends(check_permissions(["property:write"]))
-):
-    """
-    Actualiza múltiples propiedades en masa.
-    """
-    updated_properties = []
-    for property_id in update_data.ids:
-        updated_property = await property_service.update_property(
-            db, property_id, update_data.update
-        )
-        if updated_property:
-            updated_properties.append(updated_property)
-    return updated_properties
 
 @router.get(
     "/properties/metrics",

@@ -47,6 +47,10 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - Nginx como proxy reverso
 - Monitoreo con Prometheus y Grafana
 
+### Fixed
+- Fixed routing conflict in property API by moving bulk update endpoint before property ID routes
+- Corrected bulk update endpoint URL in property API tests
+
 ## [1.0.0] - YYYY-MM-DD
 
 ### Added

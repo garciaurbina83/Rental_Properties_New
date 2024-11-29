@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     """
     # Environment
     environment: str = "development"
-    debug: bool = True
+    debug: bool = False
     
     # Database settings
     database_url: str = "postgresql://postgres:postgres@localhost:5432/rental_properties"
@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     api_v1_str: str = "/api/v1"
     backend_port: str = "8000"
+    
+    # Pagination settings
+    default_limit: int = 10
+    max_limit: int = 100
     
     # Security settings
     secret_key: str = Field(default="test_secret_key_for_development_only", env="SECRET_KEY")
@@ -47,3 +51,10 @@ class Settings(BaseSettings):
     )
 
 settings = Settings()
+
+def get_settings() -> Settings:
+    """
+    Returns a cached instance of the settings.
+    This ensures we only create one instance of the settings throughout the application.
+    """
+    return settings
