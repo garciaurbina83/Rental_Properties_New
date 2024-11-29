@@ -83,7 +83,12 @@ async def create_property(
     """
     Crea una nueva propiedad.
     """
-    return await property_service.create_property(db, property_data, current_user["id"])
+    try:
+        property = await property_service.create_property(db, property_data, current_user["sub"])
+        return property
+    except Exception as e:
+        print(f"Error creating property: {str(e)}")
+        raise
 
 @router.get(
     "/properties/{property_id}",

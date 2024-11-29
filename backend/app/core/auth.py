@@ -10,7 +10,7 @@ security = HTTPBearer()
 
 class ClerkAuth:
     def __init__(self):
-        self.clerk_secret_key = settings.clerk_secret_key
+        self.clerk_secret_key = settings.CLERK_SECRET_KEY
         self.clerk_api_base = "https://api.clerk.dev/v1"
         self.headers = {
             "Authorization": f"Bearer {self.clerk_secret_key}",

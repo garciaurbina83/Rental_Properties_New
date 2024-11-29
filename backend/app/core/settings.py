@@ -2,65 +2,48 @@
 Settings module for the application
 """
 from typing import List
-from dataclasses import dataclass
-from functools import lru_cache
-import os
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-@dataclass
-class Settings:
+class Settings(BaseSettings):
     """
-    Application settings using dataclass for simpler validation
+    Settings class for the application
     """
+    # Environment
+    environment: str = "development"
+    debug: bool = True
+    
     # Database settings
     database_url: str = "postgresql://postgres:postgres@localhost:5432/rental_properties"
     database_test_url: str = "postgresql://postgres:postgres@localhost:5432/rental_properties_test"
-
+    database_host: str = "localhost"
+    database_port: str = "5432"
+    database_user: str = "postgres"
+    database_password: str = "postgres"
+    database_name: str = "rental_properties"
+    
     # Application settings
     app_name: str = "Rental Properties API"
+    app_version: str = "1.0.0"
     api_v1_str: str = "/api/v1"
+    backend_port: str = "8000"
     
     # Security settings
-    secret_key: str = "your_super_secret_key_here"
-    access_token_expire_minutes: int = 30
+    secret_key: str = Field(default="test_secret_key_for_development_only", env="SECRET_KEY")
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 1440
     
-    # Authentication settings
-    clerk_secret_key: str = ""
-    clerk_publishable_key: str = ""
+    # Clerk settings
+    clerk_secret_key: str = "sk_test_mLLXZzeqktoLswvg...psDQw3Mr8pSQ3sYCsvM0JOg"
+    clerk_publishable_key: str = "pk_test_cmFwaWQtbW91c2Ut...lcmsuYWNjb3VudHMuZGV2JA"
     
     # CORS settings
-    backend_cors_origins: List[str] = None
+    backend_cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8000"]
     
-    # Pagination settings
-    default_limit: int = 10
-    min_limit: int = 1
-    max_limit: int = 100
-    
-    # Environment
-    debug: bool = False
-    environment: str = "development"
-    
-    def __post_init__(self):
-        """Initialize settings from environment variables"""
-        # Database settings
-        self.database_url = os.getenv("DATABASE_URL", self.database_url)
-        self.database_test_url = os.getenv("DATABASE_TEST_URL", self.database_test_url)
-        
-        # Security settings
-        self.secret_key = os.getenv("SECRET_KEY", self.secret_key)
-        
-        # Authentication settings
-        self.clerk_secret_key = os.getenv("CLERK_SECRET_KEY", self.clerk_secret_key)
-        self.clerk_publishable_key = os.getenv("CLERK_PUBLISHABLE_KEY", self.clerk_publishable_key)
-        
-        # Set default CORS origins if None
-        if self.backend_cors_origins is None:
-            self.backend_cors_origins = ["http://localhost:3000", "http://localhost:8000"]
-        
-        # Environment settings
-        self.debug = os.getenv("DEBUG", str(self.debug)).lower() == "true"
-        self.environment = os.getenv("ENVIRONMENT", self.environment)
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False
+    )
 
-@lru_cache()
-def get_settings() -> Settings:
-    """Get cached settings instance"""
-    return Settings()
+settings = Settings()

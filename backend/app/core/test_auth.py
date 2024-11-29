@@ -9,7 +9,7 @@ import jwt
 from datetime import datetime, timedelta
 from .config import settings
 
-security = HTTPBearer(auto_error=False)  # This will return 401 instead of 403 for missing tokens
+security = HTTPBearer()
 
 def create_test_token() -> str:
     """
@@ -17,7 +17,7 @@ def create_test_token() -> str:
     """
     payload = {
         "sub": "test_user_id",
-        "id": "test_user_id",  # Asegurarnos de que id está presente
+        "id": "test_user_id",  # Make sure id is present
         "email": "test@example.com",
         "name": "Test User",
         "permissions": [
@@ -35,7 +35,8 @@ def create_test_token() -> str:
             "payment:delete",
             "maintenance:read",
             "maintenance:write",
-            "maintenance:delete"
+            "maintenance:delete",
+            "admin:read"
         ],
         "active": True,
         "exp": int((datetime.utcnow() + timedelta(days=1)).timestamp())
@@ -43,8 +44,8 @@ def create_test_token() -> str:
     
     token = jwt.encode(
         payload,
-        settings.JWT_SECRET_KEY,
-        algorithm=settings.ALGORITHM
+        "test_secret_key_for_development_only",  # Use a fixed test key
+        algorithm="HS256"
     )
     return token
 
@@ -55,10 +56,10 @@ def verify_test_token(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(
             token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            "test_secret_key_for_development_only",  # Use the same fixed test key
+            algorithms=["HS256"]
         )
-        # Asegurarnos de que id está presente
+        # Make sure id is present
         if "id" not in payload and "sub" in payload:
             payload["id"] = payload["sub"]
         return payload
@@ -68,7 +69,9 @@ def verify_test_token(token: str) -> Dict[str, Any]:
             detail=f"Invalid token: {str(e)}"
         )
 
-async def get_test_user(credentials: Optional[HTTPAuthorizationCredentials] = None) -> Dict[str, Any]:
+async def get_test_user(
+    credentials: HTTPAuthorizationCredentials = Security(security)
+) -> Dict[str, Any]:
     """
     Get test user data from token
     """
