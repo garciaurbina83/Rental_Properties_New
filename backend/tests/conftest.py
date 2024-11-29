@@ -114,9 +114,9 @@ def test_property_data() -> Dict[str, any]:
         "purchase_price": 200000.0,
         "current_value": 250000.0,
         "monthly_rent": 1000.0,
-        "status": "available",
+        "status": "available",  # Use lowercase status to match the enum
         "is_active": True,
-        "user_id": "test-user-id"
+        "user_id": "test_user_id"
     }
 
 @pytest.fixture

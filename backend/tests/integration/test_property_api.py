@@ -181,11 +181,10 @@ async def test_bulk_operations(
     bulk_update = {
         "ids": property_ids,
         "update": {
-            "status": "maintenance"  # Use lowercase enum value
+            "status": "maintenance"  # Use lowercase to match enum
         }
     }
     response = await client.put("/api/v1/properties/bulk", json=bulk_update)
-    print("Bulk update response:", response.json())  # Print the error response
     assert response.status_code == 200
     data = response.json()
     assert len(data) == len(property_ids)

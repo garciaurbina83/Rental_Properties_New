@@ -50,6 +50,8 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 ### Fixed
 - Fixed routing conflict in property API by moving bulk update endpoint before property ID routes
 - Corrected bulk update endpoint URL in property API tests
+- Fixed property status validation in tests by using lowercase enum values to match PropertyStatus definition
+- Updated test fixtures and bulk update test to use correct status values
 
 ## [1.0.0] - YYYY-MM-DD
 

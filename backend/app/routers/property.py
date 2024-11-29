@@ -108,14 +108,9 @@ async def bulk_update_properties(
     """
     Actualiza múltiples propiedades en masa.
     """
-    updated_properties = []
-    for property_id in update_data.ids:
-        updated_property = await property_service.update_property(
-            db, property_id, update_data.update
-        )
-        if updated_property:
-            updated_properties.append(updated_property)
-    return updated_properties
+    return await property_service.bulk_update_properties(
+        db, update_data.ids, update_data.update
+    )
 
 @router.get(
     "/properties/{property_id}",

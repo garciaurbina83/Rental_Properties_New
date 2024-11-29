@@ -287,3 +287,47 @@ async def update_property_status(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating property status: {str(e)}"
         )
+
+async def bulk_update_properties(
+    db: AsyncSession,
+    property_ids: List[int],
+    property_update: PropertyUpdate
+) -> List[Property]:
+    """
+    Updates multiple properties at once
+    """
+    updated_properties = []
+    update_data = property_update.model_dump(exclude_unset=True)
+    
+    # Handle status update if present
+    if 'status' in update_data and isinstance(update_data['status'], str):
+        try:
+            update_data['status'] = PropertyStatus(update_data['status'].lower())
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid status value. Must be one of: {[s.value for s in PropertyStatus]}"
+            )
+    
+    for property_id in property_ids:
+        try:
+            db_property = await get_property(db, property_id)
+            if db_property:
+                for field, value in update_data.items():
+                    setattr(db_property, field, value)
+                updated_properties.append(db_property)
+        except HTTPException:
+            # Skip properties that don't exist or can't be updated
+            continue
+    
+    try:
+        await db.commit()
+        for prop in updated_properties:
+            await db.refresh(prop)
+        return updated_properties
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
