@@ -22,12 +22,27 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
   - Moved to a hierarchical requirements structure
   - Added development dependencies in `requirements-dev.txt`
   - Centralized project dependencies in root `requirements.txt`
+- Added property type functionality with PRINCIPAL and INVESTMENT options
+- Added parent-child relationship between properties
+- Added new database migration for property type and parent ID
+- Added comprehensive test suite for property API
+  - Unit tests for property model and service
+  - Integration tests for property endpoints
+  - Test fixtures for different property types
+- Added comprehensive unit tests for Property API
+  - Test cases for property creation validation
+  - Test cases for parent-child property relationships
+  - Test cases for error handling in property creation
 
 ### Changed
 - Simplificación de la clase Settings
   - Migración de Pydantic a dataclasses para una validación más simple
   - Manejo consistente de variables de entorno en `__post_init__`
   - Mejora en la organización del código de configuración
+- Refactored property API to support filtering by user_id
+- Improved property test organization and structure
+- Enhanced property service with better error handling
+- Updated property schema to include new type and parent fields
 
 ### Backend
 - API RESTful con FastAPI
@@ -52,6 +67,13 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - Corrected bulk update endpoint URL in property API tests
 - Fixed property status validation in tests by using lowercase enum values to match PropertyStatus definition
 - Updated test fixtures and bulk update test to use correct status values
+- Fixed property API tests by using correct fixtures and test data
+- Fixed database cleanup in tests to prevent test interference
+- Corrected property status validation in tests
+- Fixed NameError in cleanup_db fixture by adding missing imports
+- Fixed async/await handling in Property API tests
+- Fixed error handling in property creation for invalid parent properties
+- Fixed Settings module to properly handle environment variables
 
 ## [1.0.0] - YYYY-MM-DD
 

@@ -85,9 +85,18 @@ class PropertyService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Units must have a parent property"
                 )
-            
+
             # Verificar que el padre existe y es una propiedad principal
-            parent = await self.get_property(property_data.parent_property_id)
+            try:
+                parent = await self.get_property(property_data.parent_property_id)
+            except HTTPException as e:
+                if e.status_code == status.HTTP_404_NOT_FOUND:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Parent property with id {property_data.parent_property_id} not found"
+                    )
+                raise e
+
             if parent.property_type != PropertyType.PRINCIPAL:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,

@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     """
     Settings class for the application
     """
+    model_config = SettingsConfigDict(extra='allow')
+
     # Environment
     environment: str = "development"
     debug: bool = False
@@ -21,6 +23,52 @@ class Settings(BaseSettings):
     database_user: str = "postgres"
     database_password: str = "postgres"
     database_name: str = "rental_properties"
+    
+    # Redis settings
+    redis_host: str = "redis"
+    redis_port: str = "6379"
+    redis_password: str = ""
+    redis_db: str = "0"
+    
+    # SMTP settings
+    smtp_tls: str = "True"
+    smtp_port: str = "587"
+    smtp_host: str = "smtp.gmail.com"
+    smtp_user: str = "your_email@gmail.com"
+    smtp_password: str = "your_email_password"
+    
+    # Email settings
+    emails_from_email: str = "your_email@gmail.com"
+    emails_from_name: str = "Rental Properties"
+    
+    # AWS settings
+    aws_access_key_id: str = "your_aws_access_key"
+    aws_secret_access_key: str = "your_aws_secret_key"
+    aws_region: str = "us-east-1"
+    aws_bucket_name: str = "your_bucket_name"
+    
+    # React app settings
+    react_app_api_url: str = "http://localhost:8000"
+    react_app_clerk_publishable_key: str = "your_clerk_publishable_key"
+    react_app_environment: str = "development"
+    
+    # Prometheus settings
+    prometheus_basic_auth_user: str = "admin"
+    prometheus_basic_auth_password: str = "admin"
+    
+    # Grafana settings
+    gf_security_admin_user: str = "admin"
+    gf_security_admin_password: str = "admin"
+    gf_server_root_url: str = "http://localhost:3000/grafana"
+    
+    # Alertmanager settings
+    alertmanager_slack_webhook: str = "your_slack_webhook_url"
+    alertmanager_slack_channel: str = "#alerts"
+    
+    # Nginx settings
+    nginx_host: str = "localhost"
+    ssl_certificate_path: str = "/etc/nginx/ssl/server.crt"
+    ssl_certificate_key_path: str = "/etc/nginx/ssl/server.key"
     
     # Application settings
     app_name: str = "Rental Properties API"
@@ -43,7 +91,7 @@ class Settings(BaseSettings):
     
     # CORS settings
     backend_cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8000"]
-    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
