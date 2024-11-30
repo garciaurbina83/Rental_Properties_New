@@ -24,14 +24,9 @@ async def create_property(
     current_user: Dict[str, Any] = Depends(get_current_user)
 ) -> Property:
     """Create a new property"""
-    property_dict = property_data.dict()
-    property_dict["user_id"] = current_user["id"]
-    
-    new_property = Property(**property_dict)
-    db.add(new_property)
-    await db.commit()
-    await db.refresh(new_property)
-    return new_property
+    from app.services.property_service import PropertyService
+    property_service = PropertyService(db)
+    return await property_service.create_property(property_data, current_user["id"])
 
 @router.get("", response_model=List[PropertyResponse])
 async def get_properties(
@@ -41,12 +36,9 @@ async def get_properties(
     limit: int = 100
 ) -> List[Property]:
     """Get all properties for the current user"""
-    query = select(Property).filter(
-        Property.user_id == current_user["id"]
-    ).offset(skip).limit(limit)
-    
-    result = await db.execute(query)
-    return result.scalars().all()
+    from app.services.property_service import PropertyService
+    property_service = PropertyService(db)
+    return await property_service.get_properties(skip=skip, limit=limit, filters={"user_id": current_user["id"]})
 
 @router.put("/actions/bulk-update", response_model=List[PropertyResponse])
 async def bulk_update_properties(

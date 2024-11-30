@@ -2,13 +2,14 @@ from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..dependencies import get_db
-from ..services import property_service
+from ..services.property_service import PropertyService
 from ..schemas.property import (
     PropertyCreate,
     PropertyUpdate,
     Property,
     PropertyFilter,
-    PropertyBulkUpdate
+    PropertyBulkUpdate,
+    PropertyWithUnits
 )
 from ..core.security import get_current_user, check_permissions
 
@@ -25,6 +26,7 @@ router = APIRouter()
     """,
 )
 async def get_properties(
+    user_id: str | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: Dict = Depends(get_current_user),
     _: Dict = Depends(check_permissions(["property:read"])),
@@ -35,8 +37,9 @@ async def get_properties(
     """
     Obtiene una lista de propiedades con filtros opcionales.
     """
+    property_service = PropertyService(db)
     return await property_service.get_properties(
-        db,
+        user_id=user_id,
         skip=skip,
         limit=limit,
         filters=filters.model_dump(exclude_none=True)
@@ -83,8 +86,9 @@ async def create_property(
     """
     Crea una nueva propiedad.
     """
+    property_service = PropertyService(db)
     try:
-        property = await property_service.create_property(db, property_data, current_user["sub"])
+        property = await property_service.create_property(property_data, current_user["sub"])
         return property
     except Exception as e:
         print(f"Error creating property: {str(e)}")
@@ -108,8 +112,9 @@ async def bulk_update_properties(
     """
     Actualiza múltiples propiedades en masa.
     """
+    property_service = PropertyService(db)
     return await property_service.bulk_update_properties(
-        db, update_data.ids, update_data.update
+        update_data.ids, update_data.update
     )
 
 @router.get(
@@ -130,7 +135,8 @@ async def get_property(
     """
     Obtiene una propiedad por su ID.
     """
-    property = await property_service.get_property(db, property_id)
+    property_service = PropertyService(db)
+    property = await property_service.get_property(property_id)
     if not property:
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
     return property
@@ -154,7 +160,8 @@ async def update_property(
     """
     Actualiza una propiedad existente.
     """
-    updated_property = await property_service.update_property(db, property_id, property_data)
+    property_service = PropertyService(db)
+    updated_property = await property_service.update_property(property_id, property_data)
     if not updated_property:
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
     return updated_property
@@ -177,7 +184,8 @@ async def delete_property(
     """
     Elimina una propiedad (soft delete).
     """
-    if not await property_service.delete_property(db, property_id):
+    property_service = PropertyService(db)
+    if not await property_service.delete_property(property_id):
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
 
 @router.get(
@@ -196,7 +204,8 @@ async def get_property_metrics(
     """
     Obtiene métricas de las propiedades.
     """
-    return await property_service.get_property_metrics(db)
+    property_service = PropertyService(db)
+    return await property_service.get_property_metrics()
 
 @router.get(
     "/properties/search",
@@ -218,4 +227,105 @@ async def search_properties(
     """
     Busca propiedades por término.
     """
-    return await property_service.search_properties(db, q, skip=skip, limit=limit)
+    property_service = PropertyService(db)
+    return await property_service.search_properties(q, skip=skip, limit=limit)
+
+@router.post(
+    "/properties/{principal_id}/units",
+    response_model=Property,
+    status_code=201,
+    summary="Crear nueva unidad",
+    description="""
+    Crea una nueva unidad asociada a una propiedad principal.
+    La unidad se creará automáticamente con tipo UNIT y asociada a la propiedad principal especificada.
+    Requiere el permiso 'property:write'.
+    """,
+    responses={
+        201: {
+            "description": "Unidad creada exitosamente",
+            "model": Property
+        },
+        404: {
+            "description": "Propiedad principal no encontrada"
+        },
+        422: {
+            "description": "Error de validación - La propiedad principal no es válida"
+        }
+    }
+)
+async def create_unit(
+    principal_id: int = Path(..., gt=0, description="ID de la propiedad principal"),
+    unit_data: PropertyCreate = Body(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: Dict = Depends(get_current_user),
+    _: Dict = Depends(check_permissions(["property:write"]))
+):
+    """
+    Crea una nueva unidad asociada a una propiedad principal.
+    """
+    property_service = PropertyService(db)
+    try:
+        unit = await property_service.create_unit(principal_id, unit_data, current_user["sub"])
+        return unit
+    except Exception as e:
+        print(f"Error creating unit: {str(e)}")
+        raise
+
+@router.get(
+    "/properties/{principal_id}/units",
+    response_model=List[Property],
+    summary="Obtener unidades de una propiedad",
+    description="""
+    Obtiene todas las unidades asociadas a una propiedad principal.
+    Requiere el permiso 'property:read'.
+    """,
+    responses={
+        404: {
+            "description": "Propiedad principal no encontrada"
+        },
+        422: {
+            "description": "Error de validación - La propiedad especificada no es principal"
+        }
+    }
+)
+async def get_property_units(
+    principal_id: int = Path(..., gt=0, description="ID de la propiedad principal"),
+    db: AsyncSession = Depends(get_db),
+    current_user: Dict = Depends(get_current_user),
+    _: Dict = Depends(check_permissions(["property:read"]))
+):
+    """
+    Obtiene todas las unidades de una propiedad principal.
+    """
+    property_service = PropertyService(db)
+    return await property_service.get_units_by_principal(principal_id)
+
+@router.get(
+    "/properties/{property_id}/with-units",
+    response_model=PropertyWithUnits,
+    summary="Obtener propiedad con sus unidades",
+    description="""
+    Obtiene los detalles de una propiedad principal junto con todas sus unidades.
+    Si la propiedad no es de tipo principal, se retornará un error.
+    Requiere el permiso 'property:read'.
+    """,
+    responses={
+        404: {
+            "description": "Propiedad no encontrada"
+        },
+        422: {
+            "description": "Error de validación - La propiedad no es de tipo principal"
+        }
+    }
+)
+async def get_property_with_units(
+    property_id: int = Path(..., gt=0, description="ID de la propiedad"),
+    db: AsyncSession = Depends(get_db),
+    current_user: Dict = Depends(get_current_user),
+    _: Dict = Depends(check_permissions(["property:read"]))
+):
+    """
+    Obtiene una propiedad principal con todas sus unidades.
+    """
+    property_service = PropertyService(db)
+    return await property_service.get_property_with_units(property_id)

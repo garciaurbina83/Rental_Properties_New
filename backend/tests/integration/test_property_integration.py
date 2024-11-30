@@ -7,13 +7,183 @@ from httpx import AsyncClient
 from fastapi import status
 
 from app.core.database import get_db
-from app.models.property import Property
+from app.models.property import Property, PropertyType
 from app.core.config import settings
 
 # Asegurarnos de que estamos en modo test
 settings.ENVIRONMENT = "test"
 
 pytestmark = pytest.mark.asyncio
+
+@pytest.fixture
+async def principal_property_data():
+    return {
+        "name": "Principal Property",
+        "address": "123 Main St",
+        "city": "Test City",
+        "state": "TS",
+        "zip_code": "12345",
+        "country": "Test Country",
+        "property_type": PropertyType.PRINCIPAL,
+        "parent_property_id": None
+    }
+
+@pytest.fixture
+async def unit_property_data():
+    return {
+        "name": "Unit 1",
+        "address": "123 Main St Unit 1",
+        "city": "Test City",
+        "state": "TS",
+        "zip_code": "12345",
+        "country": "Test Country",
+        "property_type": PropertyType.UNIT
+    }
+
+async def test_create_principal_property(client: AsyncClient, auth_headers, principal_property_data):
+    """Test principal property creation"""
+    response = await client.post(
+        "/api/v1/properties",
+        json=principal_property_data,
+        headers=auth_headers
+    )
+    
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    assert data["name"] == principal_property_data["name"]
+    assert data["property_type"] == PropertyType.PRINCIPAL
+    assert data["parent_property_id"] is None
+
+async def test_create_unit(client: AsyncClient, auth_headers, principal_property_data, unit_property_data):
+    """Test unit creation"""
+    # First create a principal property
+    principal_response = await client.post(
+        "/api/v1/properties",
+        json=principal_property_data,
+        headers=auth_headers
+    )
+    principal_id = principal_response.json()["id"]
+    
+    # Create a unit
+    unit_property_data["parent_property_id"] = principal_id
+    response = await client.post(
+        f"/api/v1/properties/{principal_id}/units",
+        json=unit_property_data,
+        headers=auth_headers
+    )
+    
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    assert data["name"] == unit_property_data["name"]
+    assert data["property_type"] == PropertyType.UNIT
+    assert data["parent_property_id"] == principal_id
+
+async def test_get_property_with_units(client: AsyncClient, auth_headers, principal_property_data, unit_property_data):
+    """Test getting a principal property with its units"""
+    # Create principal property
+    principal_response = await client.post(
+        "/api/v1/properties",
+        json=principal_property_data,
+        headers=auth_headers
+    )
+    principal_id = principal_response.json()["id"]
+    
+    # Create multiple units
+    unit_property_data["parent_property_id"] = principal_id
+    for i in range(3):
+        unit_data = unit_property_data.copy()
+        unit_data["name"] = f"Unit {i+1}"
+        await client.post(
+            f"/api/v1/properties/{principal_id}/units",
+            json=unit_data,
+            headers=auth_headers
+        )
+    
+    # Get property with units
+    response = await client.get(
+        f"/api/v1/properties/{principal_id}/with-units",
+        headers=auth_headers
+    )
+    
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["id"] == principal_id
+    assert data["property_type"] == PropertyType.PRINCIPAL
+    assert len(data["units"]) == 3
+
+async def test_get_units_by_principal(client: AsyncClient, auth_headers, principal_property_data, unit_property_data):
+    """Test getting all units for a principal property"""
+    # Create principal property
+    principal_response = await client.post(
+        "/api/v1/properties",
+        json=principal_property_data,
+        headers=auth_headers
+    )
+    principal_id = principal_response.json()["id"]
+    
+    # Create multiple units
+    unit_property_data["parent_property_id"] = principal_id
+    created_units = []
+    for i in range(3):
+        unit_data = unit_property_data.copy()
+        unit_data["name"] = f"Unit {i+1}"
+        unit_response = await client.post(
+            f"/api/v1/properties/{principal_id}/units",
+            json=unit_data,
+            headers=auth_headers
+        )
+        created_units.append(unit_response.json())
+    
+    # Get all units
+    response = await client.get(
+        f"/api/v1/properties/{principal_id}/units",
+        headers=auth_headers
+    )
+    
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert len(data) == 3
+    assert all(unit["parent_property_id"] == principal_id for unit in data)
+
+async def test_create_unit_invalid_parent(client: AsyncClient, auth_headers, unit_property_data):
+    """Test creating a unit with non-existent parent property"""
+    unit_property_data["parent_property_id"] = 99999
+    response = await client.post(
+        "/api/v1/properties/99999/units",
+        json=unit_property_data,
+        headers=auth_headers
+    )
+    
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+async def test_create_unit_with_unit_parent(client: AsyncClient, auth_headers, principal_property_data, unit_property_data):
+    """Test creating a unit with another unit as parent"""
+    # Create principal property
+    principal_response = await client.post(
+        "/api/v1/properties",
+        json=principal_property_data,
+        headers=auth_headers
+    )
+    principal_id = principal_response.json()["id"]
+    
+    # Create first unit
+    unit_property_data["parent_property_id"] = principal_id
+    unit_response = await client.post(
+        f"/api/v1/properties/{principal_id}/units",
+        json=unit_property_data,
+        headers=auth_headers
+    )
+    unit_id = unit_response.json()["id"]
+    
+    # Try to create unit with unit as parent
+    unit_property_data["name"] = "Sub Unit"
+    response = await client.post(
+        f"/api/v1/properties/{unit_id}/units",
+        json=unit_property_data,
+        headers=auth_headers
+    )
+    
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 async def test_create_property(client: AsyncClient, auth_headers, test_property_data):
     """Test property creation"""

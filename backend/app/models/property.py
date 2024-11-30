@@ -1,7 +1,11 @@
 from sqlalchemy import Column, String, Float, Integer, ForeignKey, Boolean, Enum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from .base import BaseModel
 import enum
+
+class PropertyType(str, enum.Enum):
+    PRINCIPAL = "principal"
+    UNIT = "unit"
 
 class PropertyStatus(str, enum.Enum):
     AVAILABLE = "available"
@@ -33,6 +37,11 @@ class Property(BaseModel):
     # Estado
     status = Column(Enum(PropertyStatus), default=PropertyStatus.AVAILABLE)
     is_active = Column(Boolean, default=True)
+    
+    # Tipo de propiedad y relaciones jerárquicas
+    property_type = Column(Enum(PropertyType), nullable=False)
+    parent_property_id = Column(Integer, ForeignKey('properties.id'), nullable=True)
+    units = relationship("Property", backref=backref("parent", remote_side="Property.id"))
     
     # Owner information
     user_id = Column(String, nullable=False, index=True)

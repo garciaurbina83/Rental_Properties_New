@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
-from ..models.property import PropertyStatus
+from ..models.property import PropertyStatus, PropertyType
 
 class PropertyBase(BaseModel):
     """Base schema for property data"""
@@ -23,6 +23,8 @@ class PropertyBase(BaseModel):
         description="Estado actual de la propiedad"
     )
     is_active: bool = Field(True, description="Indica si la propiedad está activa")
+    property_type: PropertyType = Field(..., description="Tipo de propiedad (Principal o Unit)")
+    parent_property_id: Optional[int] = Field(None, description="ID de la propiedad principal (solo para Units)")
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -42,7 +44,9 @@ class PropertyBase(BaseModel):
                 "current_value": 550000.00,
                 "monthly_rent": 2500.00,
                 "status": "available",
-                "is_active": True
+                "is_active": True,
+                "property_type": "principal",
+                "parent_property_id": None
             }
         }
     )
@@ -68,6 +72,8 @@ class PropertyUpdate(BaseModel):
     monthly_rent: Optional[float] = Field(None, ge=0, description="Renta mensual")
     status: Optional[PropertyStatus] = Field(None, description="Estado actual de la propiedad")
     is_active: Optional[bool] = Field(None, description="Indica si la propiedad está activa")
+    property_type: Optional[PropertyType] = Field(None, description="Tipo de propiedad (Principal o Unit)")
+    parent_property_id: Optional[int] = Field(None, description="ID de la propiedad principal (solo para Units)")
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -75,7 +81,9 @@ class PropertyUpdate(BaseModel):
             "example": {
                 "name": "Casa Moderna Centro Actualizada",
                 "monthly_rent": 2600.00,
-                "status": "rented"
+                "status": "rented",
+                "property_type": "unit",
+                "parent_property_id": 1
             }
         }
     )
@@ -89,6 +97,12 @@ class Property(PropertyBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+class PropertyWithUnits(Property):
+    """Schema for property response including its units"""
+    units: List[Property] = Field(default_factory=list, description="Lista de unidades de la propiedad")
+
+    model_config = ConfigDict(from_attributes=True)
+
 class PropertyFilter(BaseModel):
     """Schema for filtering properties"""
     city: Optional[str] = Field(None, description="Filtrar por ciudad")
@@ -98,20 +112,8 @@ class PropertyFilter(BaseModel):
     bedrooms: Optional[int] = Field(None, ge=0, description="Número mínimo de habitaciones")
     bathrooms: Optional[float] = Field(None, ge=0, description="Número mínimo de baños")
     status: Optional[PropertyStatus] = Field(None, description="Estado de la propiedad")
-    is_active: Optional[bool] = Field(None, description="Estado activo/inactivo")
-
-    model_config = ConfigDict(
-        from_attributes=True,
-        json_schema_extra={
-            "example": {
-                "city": "Ciudad de México",
-                "min_price": 2000.00,
-                "max_price": 3000.00,
-                "bedrooms": 2,
-                "status": "available"
-            }
-        }
-    )
+    property_type: Optional[PropertyType] = Field(None, description="Tipo de propiedad")
+    parent_property_id: Optional[int] = Field(None, description="Filtrar por propiedad principal")
 
 class PropertyBulkUpdate(BaseModel):
     """Schema for bulk updating properties"""

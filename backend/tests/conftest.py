@@ -116,6 +116,7 @@ def test_property_data() -> Dict[str, any]:
         "monthly_rent": 1000.0,
         "status": "available",  # Use lowercase status to match the enum
         "is_active": True,
+        "property_type": "principal",
         "user_id": "test_user_id"
     }
 
