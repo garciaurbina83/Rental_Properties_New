@@ -1,17 +1,19 @@
 """add vendors and update expenses
 
 Revision ID: 2024_01_add_vendors
-Revises: 6f547ff3049c
+Revises: 2024_00_create_users
 Create Date: 2024-01-15
 
 """
+from typing import Sequence, Union
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '2024_01_add_vendors'
-down_revision = '6f547ff3049c'
+down_revision = '2024_00_create_users'
 branch_labels = None
 depends_on = None
 

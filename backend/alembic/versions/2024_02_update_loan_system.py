@@ -1,7 +1,7 @@
 """update loan system
 
 Revision ID: 2024_02_update_loan
-Revises: 2024_01_add_vendors_and_update_expenses
+Revises: f76af3eb43b9
 Create Date: 2024-02-07
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '2024_02_update_loan'
-down_revision = '2024_01_add_vendors_and_update_expenses'
+down_revision = 'f76af3eb43b9'
 branch_labels = None
 depends_on = None
 
@@ -54,20 +54,15 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('updated_at', sa.DateTime(), nullable=False),
         sa.Column('loan_id', sa.Integer(), nullable=False),
-        sa.Column('payment_date', sa.Date(), nullable=False),
-        sa.Column('due_date', sa.Date(), nullable=False),
         sa.Column('amount', sa.Float(), nullable=False),
-        sa.Column('principal_amount', sa.Float(), nullable=False),
-        sa.Column('interest_amount', sa.Float(), nullable=False),
-        sa.Column('late_fee', sa.Float(), default=0.0),
-        sa.Column('payment_method', postgresql.ENUM('cash', 'transfer', 'check', 'card', name='payment_method'), nullable=False),
+        sa.Column('payment_date', sa.Date(), nullable=False),
+        sa.Column('payment_method', postgresql.ENUM('cash', 'transfer', 'check', 'card', name='payment_method', create_type=False), nullable=False),
+        sa.Column('payment_status', postgresql.ENUM('pending', 'completed', 'failed', 'cancelled', name='payment_status', create_type=False), nullable=False),
         sa.Column('reference_number', sa.String(), nullable=True),
-        sa.Column('status', postgresql.ENUM('pending', 'completed', 'failed', 'cancelled', name='payment_status'), nullable=False),
-        sa.Column('notes', sa.String(), nullable=True),
-        sa.Column('processed_by', sa.Integer(), nullable=True),
-        sa.Column('processed_at', sa.DateTime(), nullable=True),
+        sa.Column('notes', sa.Text(), nullable=True),
+        sa.Column('created_by', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(['loan_id'], ['loans.id'], ),
-        sa.ForeignKeyConstraint(['processed_by'], ['users.id'], ),
+        sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
 
@@ -75,13 +70,11 @@ def upgrade():
     op.create_index(op.f('ix_loan_documents_loan_id'), 'loan_documents', ['loan_id'], unique=False)
     op.create_index(op.f('ix_loan_payments_loan_id'), 'loan_payments', ['loan_id'], unique=False)
     op.create_index(op.f('ix_loan_payments_payment_date'), 'loan_payments', ['payment_date'], unique=False)
-    op.create_index(op.f('ix_loan_payments_due_date'), 'loan_payments', ['due_date'], unique=False)
-    op.create_index(op.f('ix_loan_payments_status'), 'loan_payments', ['status'], unique=False)
+    op.create_index(op.f('ix_loan_payments_status'), 'loan_payments', ['payment_status'], unique=False)
 
 def downgrade():
     # Eliminar índices
     op.drop_index(op.f('ix_loan_payments_status'), table_name='loan_payments')
-    op.drop_index(op.f('ix_loan_payments_due_date'), table_name='loan_payments')
     op.drop_index(op.f('ix_loan_payments_payment_date'), table_name='loan_payments')
     op.drop_index(op.f('ix_loan_payments_loan_id'), table_name='loan_payments')
     op.drop_index(op.f('ix_loan_documents_loan_id'), table_name='loan_documents')
