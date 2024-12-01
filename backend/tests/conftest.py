@@ -17,52 +17,51 @@ from app.core.database import get_db
 from app.main import app
 from app.models.base import Base
 from app.core.test_auth import create_test_token, get_test_user
-from app.core.auth import get_current_user
 from app.core.security import get_current_user
 
 settings = Settings()
 
 # Create async engine for testing
 # Ensure we're using asyncpg driver
-test_engine = create_async_engine(
-    settings.database_test_url.replace("postgresql://", "postgresql+asyncpg://"),
-    poolclass=NullPool,
-    echo=settings.debug
-)
-
-# Create async session factory
-test_async_session = async_sessionmaker(
-    test_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False
-)
 
 @pytest.fixture(scope="session")
 def event_loop() -> Generator:
     """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+    asyncio.set_event_loop(loop)
     yield loop
     loop.close()
 
 @pytest.fixture(scope="session")
 async def db_engine():
     """Yield the SQLAlchemy engine"""
-    async with test_engine.begin() as conn:
+    engine = create_async_engine(
+        settings.database_test_url.replace("postgresql://", "postgresql+asyncpg://"),
+        poolclass=NullPool,
+        echo=settings.debug
+    )
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    yield test_engine
-    async with test_engine.begin() as conn:
+    yield engine
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
 
 @pytest.fixture(scope="function")
 async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
     """Yield a SQLAlchemy session"""
-    async with test_async_session() as session:
+    session = async_sessionmaker(
+        db_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False
+    )
+    async with session() as session:
         try:
             yield session
-            await session.rollback()
         finally:
             await session.close()
 

@@ -15,6 +15,14 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from .config import settings
 from .logger import logger
+import logging
+import time
+from typing import Dict, Any
+from prometheus_client import Counter, Histogram, Gauge
+from app.schemas.notification import NotificationType, NotificationChannel, NotificationStatus
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Configuración de Sentry
 def init_sentry():
@@ -52,6 +60,12 @@ errors_total = Counter(
     ['type', 'endpoint']
 )
 
+notification_total = Counter(
+    'notification_total',
+    'Total number of notifications sent',
+    ['type', 'channel', 'status']
+)
+
 # Histogramas
 request_duration_seconds = Histogram(
     'request_duration_seconds',
@@ -67,6 +81,12 @@ db_operation_duration_seconds = Histogram(
     buckets=[0.01, 0.05, 0.1, 0.5, 1.0]
 )
 
+notification_duration = Histogram(
+    'notification_duration_seconds',
+    'Time spent sending notifications',
+    ['type', 'channel']
+)
+
 # Gauges
 active_requests = Gauge(
     'active_requests',
@@ -76,6 +96,11 @@ active_requests = Gauge(
 db_connections = Gauge(
     'db_connections',
     'Número actual de conexiones a la base de datos'
+)
+
+notification_queue_size = Gauge(
+    'notification_queue_size',
+    'Number of notifications in queue'
 )
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
@@ -170,3 +195,91 @@ def track_error(error_type: str, endpoint: str):
 def set_db_connections(count: int):
     """Actualizar el número de conexiones de base de datos"""
     db_connections.set(count)
+
+class NotificationMonitoring:
+    """
+    Monitoring manager for notification-related metrics.
+    """
+    @staticmethod
+    def record_notification_sent(
+        notification_type: NotificationType,
+        channel: NotificationChannel,
+        status: NotificationStatus,
+        duration: float
+    ):
+        """
+        Record metrics for a sent notification.
+        """
+        try:
+            # Increment notification counter
+            notification_total.labels(
+                type=notification_type.value,
+                channel=channel.value,
+                status=status.value
+            ).inc()
+
+            # Record sending duration
+            notification_duration.labels(
+                type=notification_type.value,
+                channel=channel.value
+            ).observe(duration)
+
+            logger.info(
+                f"Notification metrics recorded - Type: {notification_type}, "
+                f"Channel: {channel}, Status: {status}, Duration: {duration:.2f}s"
+            )
+        except Exception as e:
+            logger.error(f"Failed to record notification metrics: {str(e)}")
+
+    @staticmethod
+    def update_queue_size(size: int):
+        """
+        Update notification queue size metric.
+        """
+        try:
+            notification_queue_size.set(size)
+        except Exception as e:
+            logger.error(f"Failed to update queue size metric: {str(e)}")
+
+    @staticmethod
+    def monitor_notification_sending(func):
+        """
+        Decorator to monitor notification sending.
+        """
+        async def wrapper(*args, **kwargs):
+            start_time = time.time()
+            try:
+                result = await func(*args, **kwargs)
+                duration = time.time() - start_time
+                
+                # Extract notification details from the first argument (notification object)
+                if args and hasattr(args[0], 'type') and hasattr(args[0], 'channels'):
+                    notification = args[0]
+                    for channel in notification.channels:
+                        NotificationMonitoring.record_notification_sent(
+                            notification.type,
+                            channel,
+                            NotificationStatus.SENT,
+                            duration
+                        )
+                
+                return result
+            except Exception as e:
+                duration = time.time() - start_time
+                
+                # Record failure metrics
+                if args and hasattr(args[0], 'type') and hasattr(args[0], 'channels'):
+                    notification = args[0]
+                    for channel in notification.channels:
+                        NotificationMonitoring.record_notification_sent(
+                            notification.type,
+                            channel,
+                            NotificationStatus.FAILED,
+                            duration
+                        )
+                
+                raise e
+        
+        return wrapper
+
+notification_monitoring = NotificationMonitoring()

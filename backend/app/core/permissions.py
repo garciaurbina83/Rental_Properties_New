@@ -1,4 +1,6 @@
 from typing import Dict, List, Set
+from enum import Enum
+from fastapi import HTTPException
 
 # Definición de roles y sus permisos correspondientes
 ROLE_PERMISSIONS: Dict[str, List[str]] = {
@@ -37,6 +39,74 @@ ROLE_PERMISSIONS: Dict[str, List[str]] = {
         "view_reports"
     ]
 }
+
+class PermissionLevel(Enum):
+    READ = "read"
+    WRITE = "write"
+    APPROVE = "approve"
+    ADMIN = "admin"
+
+class ExpensePermission:
+    def __init__(self, user, expense=None):
+        self.user = user
+        self.expense = expense
+
+    def can_create(self) -> bool:
+        return self.user.is_active
+
+    def can_read(self) -> bool:
+        if not self.expense:
+            return self.user.is_active
+        return (
+            self.user.is_active and
+            (self.user.is_superuser or
+             self.expense.created_by_id == self.user.id or
+             self.user.has_permission(PermissionLevel.READ))
+        )
+
+    def can_update(self) -> bool:
+        if not self.expense:
+            return False
+        return (
+            self.user.is_active and
+            (self.user.is_superuser or
+             self.expense.created_by_id == self.user.id or
+             self.user.has_permission(PermissionLevel.WRITE))
+        )
+
+    def can_delete(self) -> bool:
+        if not self.expense:
+            return False
+        return (
+            self.user.is_active and
+            (self.user.is_superuser or
+             self.expense.created_by_id == self.user.id)
+        )
+
+    def can_approve(self) -> bool:
+        if not self.expense:
+            return False
+        return (
+            self.user.is_active and
+            self.user.has_permission(PermissionLevel.APPROVE) and
+            self.expense.created_by_id != self.user.id  # No self-approval
+        )
+
+    def check_amount_limit(self, amount: float) -> bool:
+        """Check if user can approve expense with given amount."""
+        if not self.user.approval_limit:
+            return True
+        return amount <= self.user.approval_limit
+
+def check_permission(permission_func, error_message: str = "Not enough permissions"):
+    """Decorator to check permissions."""
+    def decorator(func):
+        async def wrapper(*args, **kwargs):
+            if not permission_func(*args, **kwargs):
+                raise HTTPException(status_code=403, detail=error_message)
+            return await func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 def get_permissions_for_role(role: str) -> Set[str]:
     """

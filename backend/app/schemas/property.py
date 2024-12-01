@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional, List
 from datetime import datetime
 from ..models.property import PropertyStatus, PropertyType
@@ -100,6 +100,23 @@ class Property(PropertyBase):
 class PropertyWithUnits(Property):
     """Schema for property response including its units"""
     units: List[Property] = Field(default_factory=list, description="Lista de unidades de la propiedad")
+    
+    @field_validator('property_type')
+    @classmethod
+    def validate_property_type(cls, v):
+        if v != PropertyType.PRINCIPAL:
+            raise ValueError("Solo las propiedades principales pueden tener unidades")
+        return v
+    
+    @field_validator('units')
+    @classmethod
+    def validate_units(cls, v):
+        for unit in v:
+            if unit.property_type != PropertyType.UNIT:
+                raise ValueError("Las unidades deben ser de tipo UNIT")
+            if unit.parent_property_id is None:
+                raise ValueError("Las unidades deben tener un parent_property_id")
+        return v
 
     model_config = ConfigDict(from_attributes=True)
 

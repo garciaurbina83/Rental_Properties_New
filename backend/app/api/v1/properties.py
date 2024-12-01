@@ -12,7 +12,8 @@ from app.schemas.property import (
     PropertyCreate,
     PropertyUpdate,
     PropertyResponse,
-    PropertyBulkUpdate
+    PropertyBulkUpdate,
+    PropertyWithUnits
 )
 
 router = APIRouter()
@@ -164,3 +165,37 @@ async def delete_property(
     
     await db.delete(property_obj)
     await db.commit()
+
+@router.post("/{principal_id}/units", response_model=PropertyResponse)
+async def create_unit(
+    principal_id: int,
+    unit_data: PropertyCreate,
+    db: AsyncSession = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Property:
+    """Create a new unit for a principal property"""
+    from app.services.property_service import PropertyService
+    property_service = PropertyService(db)
+    return await property_service.create_unit(principal_id, unit_data, current_user["id"])
+
+@router.get("/{principal_id}/units", response_model=List[PropertyResponse])
+async def get_property_units(
+    principal_id: int,
+    db: AsyncSession = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> List[Property]:
+    """Get all units belonging to a principal property"""
+    from app.services.property_service import PropertyService
+    property_service = PropertyService(db)
+    return await property_service.get_units_by_principal(principal_id)
+
+@router.get("/{property_id}/with-units", response_model=PropertyWithUnits)
+async def get_property_with_units(
+    property_id: int,
+    db: AsyncSession = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> PropertyWithUnits:
+    """Get a principal property with all its units"""
+    from app.services.property_service import PropertyService
+    property_service = PropertyService(db)
+    return await property_service.get_property_with_units(property_id)

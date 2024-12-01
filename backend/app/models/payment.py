@@ -16,16 +16,29 @@ class PaymentMethod(enum.Enum):
     DEBIT_CARD = "debit_card"
     OTHER = "other"
 
+class PaymentConcept(enum.Enum):
+    RENT = "rent"
+    DEPOSIT = "deposit"
+    LATE_FEE = "late_fee"
+    MAINTENANCE = "maintenance"
+    OTHER = "other"
+
 class Payment(BaseModel):
     __tablename__ = "payments"
 
     # Relaciones
     contract_id = Column(Integer, ForeignKey("contracts.id"))
+    processed_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     
     # Detalles del pago
     amount = Column(Float)
     due_date = Column(Date)
     payment_date = Column(Date)
+    
+    # Concepto y período
+    concept = Column(Enum(PaymentConcept), default=PaymentConcept.RENT)
+    payment_period_start = Column(Date)
+    payment_period_end = Column(Date)
     
     # Estado y método
     status = Column(Enum(PaymentStatus), default=PaymentStatus.PENDING)
@@ -40,3 +53,4 @@ class Payment(BaseModel):
     
     # Relaciones
     contract = relationship("Contract", back_populates="payments")
+    processed_by = relationship("User", back_populates="processed_payments")

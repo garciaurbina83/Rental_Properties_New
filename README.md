@@ -11,6 +11,12 @@ Sistema integral para la gestión y administración de propiedades de renta.
 - **Autenticación:** Clerk
 - **Documentación:** Swagger UI y ReDoc
 
+## Documentación
+
+- [API Documentation](docs/api.md) - Documentación detallada de los endpoints de la API
+- Swagger UI (disponible en `/docs` cuando el servidor está corriendo)
+- ReDoc (disponible en `/redoc` cuando el servidor está corriendo)
+
 ## Estructura del Proyecto
 
 ```

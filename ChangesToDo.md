@@ -1,100 +1,92 @@
-# Plan de Implementación: Propiedades Principales y Units
+# Cambios Pendientes y Estado del Proyecto
 
-## 1. Modificar el Modelo de Property
-```python
-# Añadir nuevo Enum para tipos de propiedad
-class PropertyType(str, enum.Enum):
-    PRINCIPAL = "principal"
-    UNIT = "unit"
+## Módulos Completados
+- Contratos
+- Inquilinos
+- Sistema de Préstamos (Core)
+  - Gestión básica de préstamos
+  - Procesamiento de pagos
+  - Cálculo de multas por pagos tardíos
+  - Sistema de recordatorios y notificaciones
+  - Reportes mensuales y métricas de rendimiento
+- Sistema de Notificaciones
+  - Notificaciones en tiempo real (WebSocket)
+  - Gestión de preferencias de notificación
+  - Tipos de notificaciones:
+    - Pagos (próximos, procesados, atrasados)
+    - Estados de préstamos
+    - Sistema
+    - Mantenimiento
+    - Contratos
+- Sistema de Mantenimiento
+  - Gestión de tickets de mantenimiento
+  - Seguimiento de estado y prioridad
+  - Notificaciones automáticas
+  - Registro de costos y resoluciones
+  - Filtros y búsqueda avanzada
 
-# Modificar la clase Property
-property_type = Column(Enum(PropertyType), nullable=False)
-parent_property_id = Column(Integer, ForeignKey('properties.id'), nullable=True)
-units = relationship("Property", backref=backref("parent", remote_side=[id]))
-```
+## Tareas Pendientes
 
-## 2. Actualizar los Schemas
-```python
-# Modificar PropertyBase
-property_type: PropertyType
-parent_property_id: Optional[int] = None
-units: Optional[List["Property"]] = None
+### 1. Sistema de Préstamos (Mejoras)
+- [x] Implementar cálculo de multas por pagos tardíos
+- [x] Implementar sistema de recordatorios de pago
+- [x] Implementar reportes mensuales
+  - [x] Resumen de pagos
+  - [x] Análisis de morosidad
+  - [x] Proyecciones de flujo de caja
+- [ ] Mejorar dashboard de préstamos
+  - Gráficos de estado de pagos
+  - Indicadores de morosidad
+  - Alertas visuales
 
-# Nuevo schema para respuesta de Units
-class PropertyWithUnits(Property):
-    units: List[Property] = []
-```
+### 2. Sistema de Notificaciones
+- [x] Implementar notificaciones de pagos próximos
+- [x] Implementar alertas de pagos vencidos
+- [x] Implementar notificaciones en la aplicación
+- [ ] Implementar notificaciones por SMS
+- [x] Configuración de preferencias de notificación por usuario
 
-## 3. Modificar los Servicios (property_service.py)
-### Nuevas funciones necesarias:
-```python
-async def create_unit(db, principal_id: int, unit_data: PropertyCreate)
-async def get_property_with_units(db, property_id: int)
-async def get_units_by_principal(db, principal_id: int)
-```
-### Validaciones adicionales:
-- Verificar que una Unit solo pueda ser creada para una propiedad Principal
-- Verificar que una Unit no pueda tener otras Units
-- Validar que el parent_property_id exista y sea de tipo Principal
+### 3. Sistema de Mantenimiento
+- [x] Implementar gestión de tickets de mantenimiento
+- [x] Implementar seguimiento de estado y prioridad
+- [x] Integrar con sistema de notificaciones
+- [x] Implementar registro de costos
+- [ ] Implementar carga de fotos y documentos
+- [ ] Implementar asignación de contratistas
+- [ ] Implementar calendario de mantenimiento preventivo
 
-## 4. Actualizar los Endpoints
-```python
-# Nuevos endpoints en property.py
-@router.post("/properties/{principal_id}/units")
-async def create_unit(principal_id: int, unit_data: PropertyCreate)
+### 4. Reportes y Análisis
+- [ ] Dashboard general
+  - Estado general de préstamos
+  - Indicadores clave de rendimiento
+  - Gráficos de tendencias
+- [x] Reportes personalizables
+  - [x] Filtros por fecha
+  - [x] Filtros por estado
+  - [x] Exportación a JSON
+- [ ] Análisis predictivo
+  - Predicción de pagos tardíos
+  - Análisis de riesgo
 
-@router.get("/properties/{principal_id}/units")
-async def get_property_units(principal_id: int)
+## Consideraciones Técnicas
+1. Mantener cobertura de pruebas > 80%
+2. Documentar todas las APIs nuevas
+3. Implementar logging detallado
+4. Optimizar consultas a la base de datos
+5. Implementar caché donde sea necesario
+6. Agregar autenticación para WebSocket
 
-@router.get("/properties/{property_id}/with-units")
-async def get_property_with_units(property_id: int)
-```
+## Prioridades
+1. ~~Completar reportes mensuales del sistema de préstamos~~ ✓
+2. ~~Implementar sistema de notificaciones en la aplicación~~ ✓
+3. ~~Implementar sistema de mantenimiento básico~~ ✓
+4. Implementar dashboard de préstamos
 
-## 5. Tests a Implementar
-```python
-# En test_property.py
-async def test_create_principal_property():
-    # Verificar creación de propiedad principal
-
-async def test_create_unit():
-    # Verificar creación de unit asociada a principal
-
-async def test_create_unit_invalid_parent():
-    # Verificar que falle al crear unit con parent inválido
-
-async def test_get_property_with_units():
-    # Verificar obtención de propiedad con sus units
-
-async def test_unit_cannot_have_units():
-    # Verificar que una unit no puede tener sub-units
-
-async def test_bulk_update_with_units():
-    # Verificar actualización masiva respetando jerarquía
-```
-
-## 6. Migración de Base de Datos
-```python
-# Crear nueva migración para:
-- Añadir columna property_type
-- Añadir columna parent_property_id
-- Añadir foreign key constraint
-```
-
-## 7. Validaciones Adicionales
-- Verificar permisos específicos para gestión de Units
-- Validar que al eliminar una propiedad Principal se manejen sus Units
-- Implementar reglas de negocio específicas para cada tipo
-
-## 8. Documentación
-- Actualizar la documentación de la API
-- Documentar nuevos endpoints
-- Actualizar ejemplos de uso
-- Documentar reglas de negocio para Principal/Units
-
-## Orden Sugerido de Implementación
-1. Modelo y Schemas (Base de la implementación)
-2. Migración de Base de Datos
-3. Servicios y Validaciones
-4. Endpoints
-5. Tests
-6. Documentación
+## Notas Adicionales
+- Considerar la implementación de un sistema de respaldo automático
+- Evaluar la necesidad de escalamiento horizontal
+- Planificar la migración a microservicios en el futuro
+- Implementar exportación de reportes a otros formatos (PDF, Excel)
+- Agregar más canales de notificación (SMS, Push)
+- Implementar sistema de recordatorios para mantenimiento preventivo
+- Considerar integración con proveedores de servicios de mantenimiento

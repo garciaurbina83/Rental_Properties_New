@@ -70,3 +70,19 @@ class NotFoundException(HTTPException):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=detail
         )
+
+class ValidationError(HTTPException):
+    """Excepción para errores de validación"""
+    def __init__(self, detail: str = "Validation error"):
+        super().__init__(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=detail
+        )
+
+class PaymentProcessError(HTTPException):
+    """Excepción para errores en el procesamiento de pagos"""
+    def __init__(self, detail: str = "Error processing payment"):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail
+        )

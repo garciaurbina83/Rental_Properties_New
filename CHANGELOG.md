@@ -33,6 +33,36 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
   - Test cases for property creation validation
   - Test cases for parent-child property relationships
   - Test cases for error handling in property creation
+- Validaciones avanzadas para contratos:
+  - Verificación de disponibilidad de propiedades
+  - Validación de fechas de contrato
+  - Validación de montos y depósitos
+  - Verificación de documentos requeridos
+  - Validación de información del garante
+- Documentación completa del sistema:
+  - Documentación detallada de la API de contratos
+  - Documentación de la API de inquilinos
+  - Guía completa de reglas de negocio
+  - Ejemplos de uso para todos los endpoints
+  - Documentación del proceso de renovación y terminación
+  - Guía de gestión de depósitos
+- Sistema de mantenimiento básico
+  - Gestión de tickets de mantenimiento
+  - Seguimiento de estado y prioridad
+  - Notificaciones automáticas
+  - Registro de costos y resoluciones
+  - Filtros y búsqueda avanzada
+- Nuevos endpoints para mantenimiento
+  - POST /maintenance/tickets/
+  - GET /maintenance/tickets/
+  - GET /maintenance/tickets/{ticket_id}
+  - PUT /maintenance/tickets/{ticket_id}
+  - DELETE /maintenance/tickets/{ticket_id}
+  - POST /maintenance/tickets/{ticket_id}/close
+- Servicio MaintenanceService para lógica de negocio
+  - Gestión de tickets vencidos
+  - Seguimiento de mantenimientos próximos
+  - Integración con sistema de notificaciones
 
 ### Changed
 - Simplificación de la clase Settings
@@ -43,6 +73,17 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - Improved property test organization and structure
 - Enhanced property service with better error handling
 - Updated property schema to include new type and parent fields
+- Mejorado el sistema de validación de contratos:
+  - Implementación de validaciones más robustas y detalladas
+  - Mejor manejo de errores con mensajes descriptivos
+  - Validaciones asíncronas para verificación de disponibilidad
+- Reorganizada y expandida la documentación:
+  - Nueva estructura de documentación por módulos
+  - Ejemplos de código actualizados y mejorados
+  - Documentación más detallada de reglas de negocio
+  - Mejor organización de la documentación de la API
+- Actualizado api_router para incluir endpoints de mantenimiento
+- Mejorada integración con sistema de notificaciones
 
 ### Backend
 - API RESTful con FastAPI
@@ -74,6 +115,37 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - Fixed async/await handling in Property API tests
 - Fixed error handling in property creation for invalid parent properties
 - Fixed Settings module to properly handle environment variables
+
+## [1.1.0] - 2024-01-15
+
+### Added
+- Sistema completo de pagos
+  - Modelo de pagos con estados y conceptos
+  - Endpoints CRUD para gestión de pagos
+  - Validaciones de negocio y datos
+  - Sistema de notificaciones para pagos
+  - Reportes y análisis de pagos
+  - Integraciones con contratos y inquilinos
+- Sistema de auditoría
+  - Registro de todas las operaciones
+  - Trazabilidad de cambios
+  - Historial completo de modificaciones
+- Pruebas unitarias y de integración
+  - Cobertura completa del módulo de pagos
+  - Pruebas de validaciones y reglas de negocio
+  - Pruebas de integración con otros módulos
+
+### Changed
+- Mejoras en la estructura de pruebas
+  - Reorganización de tests por tipo
+  - Separación de pruebas unitarias y de integración
+  - Mejora en utilidades de prueba
+
+### Security
+- Implementación de auditoría completa
+  - Registro de IP y user-agent
+  - Control de acceso por rol
+  - Validación de permisos
 
 ## [1.0.0] - YYYY-MM-DD
 
@@ -154,5 +226,6 @@ Seguimos la convención de [Conventional Commits](https://www.conventionalcommit
 
 ## Links
 
-- [Unreleased]: https://github.com/tuusuario/rental-properties/compare/v1.0.0...HEAD
+- [Unreleased]: https://github.com/tuusuario/rental-properties/compare/v1.1.0...HEAD
+- [1.1.0]: https://github.com/tuusuario/rental-properties/releases/tag/v1.1.0
 - [1.0.0]: https://github.com/tuusuario/rental-properties/releases/tag/v1.0.0

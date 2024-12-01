@@ -218,3 +218,252 @@ async def test_create_unit_with_unit_parent(mock_property_dict, mock_unit_dict):
         await service.create_property(unit_data, user_id="test_user")
     assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
     assert "Units can only be created under principal properties" in str(exc_info.value.detail)
+
+@pytest.mark.asyncio
+async def test_create_unit_success():
+    """Test successful creation of a unit under a principal property"""
+    # Mock database session
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock()
+    mock_db.commit = AsyncMock()
+    mock_db.refresh = AsyncMock()
+    
+    # Create service instance
+    service = PropertyService(mock_db)
+    
+    # Mock get_property to return a principal property
+    principal_property = Property(**{
+        "id": 1,
+        "property_type": PropertyType.PRINCIPAL,
+        "name": "Principal Property",
+        "address": "123 Main St",
+        "city": "Test City",
+        "state": "TS",
+        "zip_code": "12345",
+        "country": "Test Country",
+        "size": 200.0,
+        "bedrooms": 4,
+        "bathrooms": 3.0,
+        "parking_spots": 2,
+        "user_id": "test_user",
+        "is_active": True
+    })
+    
+    with patch.object(service, 'get_property', return_value=principal_property):
+        # Create unit data
+        unit_data = PropertyCreate(
+            name="Test Unit",
+            address="123 Main St Unit 1",
+            city="Test City",
+            state="TS",
+            zip_code="12345",
+            country="Test Country",
+            size=75.0,
+            bedrooms=2,
+            bathrooms=1.0,
+            parking_spots=1,
+            property_type=PropertyType.UNIT,
+            parent_property_id=1
+        )
+        
+        # Create the unit
+        unit = await service.create_unit(1, unit_data, "test_user")
+        
+        # Verify the unit was created correctly
+        assert unit.property_type == PropertyType.UNIT
+        assert unit.parent_property_id == 1
+        assert unit.name == "Test Unit"
+        mock_db.add.assert_called_once()
+        mock_db.commit.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_get_property_with_units():
+    """Test getting a principal property with its units"""
+    # Mock database session
+    mock_db = AsyncMock()
+    
+    # Create service instance
+    service = PropertyService(mock_db)
+    
+    # Create mock principal property
+    principal = Property(**{
+        "id": 1,
+        "property_type": PropertyType.PRINCIPAL,
+        "name": "Principal Property",
+        "address": "123 Main St",
+        "city": "Test City",
+        "state": "TS",
+        "zip_code": "12345",
+        "country": "Test Country",
+        "size": 200.0,
+        "bedrooms": 4,
+        "bathrooms": 3.0,
+        "parking_spots": 2,
+        "user_id": "test_user",
+        "is_active": True
+    })
+    
+    # Create mock units
+    units = [
+        Property(**{
+            "id": i,
+            "property_type": PropertyType.UNIT,
+            "parent_property_id": 1,
+            "name": f"Unit {i}",
+            "address": f"123 Main St Unit {i}",
+            "city": "Test City",
+            "state": "TS",
+            "zip_code": "12345",
+            "country": "Test Country",
+            "size": 75.0,
+            "bedrooms": 2,
+            "bathrooms": 1.0,
+            "parking_spots": 1,
+            "user_id": "test_user",
+            "is_active": True
+        }) for i in range(2, 4)
+    ]
+    
+    # Mock the database queries
+    mock_db.execute.return_value.scalar_one_or_none.return_value = principal
+    mock_db.execute.return_value.scalars.return_value.all.return_value = units
+    
+    # Get the property with units
+    result = await service.get_property_with_units(1)
+    
+    # Verify the result
+    assert result.id == 1
+    assert result.property_type == PropertyType.PRINCIPAL
+    assert len(result.units) == 2
+    assert all(unit.property_type == PropertyType.UNIT for unit in result.units)
+    assert all(unit.parent_property_id == 1 for unit in result.units)
+
+@pytest.mark.asyncio
+async def test_unit_cannot_have_units():
+    """Test that a unit cannot have sub-units"""
+    # Mock database session
+    mock_db = AsyncMock()
+    
+    # Create service instance
+    service = PropertyService(mock_db)
+    
+    # Create mock unit property
+    unit = Property(**{
+        "id": 2,
+        "property_type": PropertyType.UNIT,
+        "parent_property_id": 1,
+        "name": "Unit 1",
+        "address": "123 Main St Unit 1",
+        "city": "Test City",
+        "state": "TS",
+        "zip_code": "12345",
+        "country": "Test Country",
+        "size": 75.0,
+        "bedrooms": 2,
+        "bathrooms": 1.0,
+        "parking_spots": 1,
+        "user_id": "test_user",
+        "is_active": True
+    })
+    
+    # Mock get_property to return a unit
+    with patch.object(service, 'get_property', return_value=unit):
+        # Try to create a sub-unit
+        sub_unit_data = PropertyCreate(
+            name="Sub Unit",
+            address="123 Main St Unit 1-A",
+            city="Test City",
+            state="TS",
+            zip_code="12345",
+            country="Test Country",
+            size=50.0,
+            bedrooms=1,
+            bathrooms=1.0,
+            parking_spots=1,
+            property_type=PropertyType.UNIT,
+            parent_property_id=2
+        )
+        
+        # Verify that creating a sub-unit raises an error
+        with pytest.raises(HTTPException) as exc_info:
+            await service.create_unit(2, sub_unit_data, "test_user")
+        
+        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Units can only be created under principal properties" in str(exc_info.value.detail)
+
+@pytest.mark.asyncio
+async def test_bulk_update_with_units():
+    """Test bulk updating properties while respecting the hierarchy"""
+    # Mock database session
+    mock_db = AsyncMock()
+    
+    # Create service instance
+    service = PropertyService(mock_db)
+    
+    # Create mock properties (1 principal with 2 units)
+    properties = [
+        Property(**{
+            "id": 1,
+            "property_type": PropertyType.PRINCIPAL,
+            "name": "Principal Property",
+            "address": "123 Main St",
+            "city": "Test City",
+            "state": "TS",
+            "zip_code": "12345",
+            "country": "Test Country",
+            "size": 200.0,
+            "bedrooms": 4,
+            "bathrooms": 3.0,
+            "parking_spots": 2,
+            "user_id": "test_user",
+            "is_active": True
+        }),
+        Property(**{
+            "id": 2,
+            "property_type": PropertyType.UNIT,
+            "parent_property_id": 1,
+            "name": "Unit 1",
+            "address": "123 Main St Unit 1",
+            "city": "Test City",
+            "state": "TS",
+            "zip_code": "12345",
+            "country": "Test Country",
+            "size": 75.0,
+            "bedrooms": 2,
+            "bathrooms": 1.0,
+            "parking_spots": 1,
+            "user_id": "test_user",
+            "is_active": True
+        }),
+        Property(**{
+            "id": 3,
+            "property_type": PropertyType.UNIT,
+            "parent_property_id": 1,
+            "name": "Unit 2",
+            "address": "123 Main St Unit 2",
+            "city": "Test City",
+            "state": "TS",
+            "zip_code": "12345",
+            "country": "Test Country",
+            "size": 75.0,
+            "bedrooms": 2,
+            "bathrooms": 1.0,
+            "parking_spots": 1,
+            "user_id": "test_user",
+            "is_active": True
+        })
+    ]
+    
+    # Mock the database queries
+    mock_db.execute.return_value.scalars.return_value.all.return_value = properties
+    
+    # Create update data
+    update_data = PropertyUpdate(status=PropertyStatus.MAINTENANCE)
+    
+    # Perform bulk update
+    updated = await service.bulk_update_properties([1, 2, 3], update_data, "test_user")
+    
+    # Verify the updates
+    assert len(updated) == 3
+    assert all(p.status == PropertyStatus.MAINTENANCE for p in updated)
+    mock_db.commit.assert_called_once()
