@@ -8,6 +8,14 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 ## [Unreleased]
 
 ### Added
+- Nuevo componente de mapa interactivo para visualizar ubicaciones de propiedades
+- Integración con Google Maps API para mostrar propiedades en el mapa
+- Marcadores personalizados en el mapa con estados de propiedades
+- Panel de rendimiento de propiedades con métricas clave
+- Calendario de eventos para seguimiento de actividades
+- Lista de tareas con prioridades y fechas de vencimiento
+- Sección de alertas para notificaciones importantes
+- Panel de acciones rápidas para tareas comunes
 - Sistema de autenticación con Clerk
 - Dashboard principal con gráficos de Recharts
 - Sistema de monitoreo con Prometheus y Grafana
@@ -65,6 +73,11 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
   - Integración con sistema de notificaciones
 
 ### Changed
+- Rediseño completo del dashboard para mejor organización
+- Mejora en la visualización de transacciones recientes
+- Actualización del sidebar con nuevas secciones
+- Optimización del layout para mejor usabilidad
+- Mejora en la presentación de estadísticas y KPIs
 - Simplificación de la clase Settings
   - Migración de Pydantic a dataclasses para una validación más simple
   - Manejo consistente de variables de entorno en `__post_init__`
@@ -84,6 +97,17 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
   - Mejor organización de la documentación de la API
 - Actualizado api_router para incluir endpoints de mantenimiento
 - Mejorada integración con sistema de notificaciones
+- Database
+  - Resolved Alembic migration conflicts and duplications
+  - Restructured migration chain for better organization:
+    - Created new migration for users table
+    - Fixed vendors table creation to avoid duplication
+    - Removed duplicate enum types in loan system
+    - Merged migration heads for linear history
+  - Enhanced loan system schema:
+    - Added payment tracking fields
+    - Created loan_documents and loan_payments tables
+    - Established proper enum types for loan management
 
 ### Backend
 - API RESTful con FastAPI
@@ -104,6 +128,9 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - Monitoreo con Prometheus y Grafana
 
 ### Fixed
+- Corrección de estilos en componentes de UI
+- Mejora en la responsividad del dashboard
+- Optimización de rendimiento en la carga de componentes
 - Fixed routing conflict in property API by moving bulk update endpoint before property ID routes
 - Corrected bulk update endpoint URL in property API tests
 - Fixed property status validation in tests by using lowercase enum values to match PropertyStatus definition
@@ -191,6 +218,58 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - Headers de seguridad en Nginx
 - Validación de tokens JWT
 - Sanitización de inputs
+
+## [0.3.0] - 2024-01-09
+
+### Added
+- Implementación del formulario de Agregar Propiedad con campos completos:
+  - Información básica (nombre, precio, tipo, estado)
+  - Características (habitaciones, baños, metros cuadrados, estacionamientos)
+  - Dirección (calle, ciudad, estado, código postal)
+  - Descripción
+  - Sección para subir imágenes
+- Integración de diálogo modal para el formulario de nueva propiedad
+- Estado local temporal para manejar nuevas propiedades
+
+### Changed
+- Simplificación de la interfaz eliminando el botón redundante "Nueva Propiedad"
+- Mejora en la organización del código separando la lógica del formulario en un componente dedicado
+
+## [0.2.0] - 2024-01-08
+
+### Added
+- Componentes UI base:
+  - Alert para mensajes del sistema
+  - Badge para indicadores de estado
+  - Dropdown Menu para opciones
+  - Input para campos de texto
+  - Label para etiquetas de formulario
+  - Select para selección de opciones
+  - Sheet para paneles deslizantes
+  - Table para visualización de datos
+  - Tabs para navegación
+  - Textarea para texto multilínea
+- Tipos TypeScript para:
+  - Contratos
+  - Pagos
+  - Mantenimiento
+- Componentes funcionales:
+  - PropertyImportExport para importar/exportar datos
+  - PropertyReports para generar reportes
+  - Paginación para la lista de propiedades
+
+### Changed
+- Integración de Radix UI para componentes avanzados
+- Mejora en la estructura de archivos del proyecto
+- Actualización de dependencias para resolver conflictos
+
+## [0.1.0] - 2024-01-07
+
+### Added
+- Configuración inicial del proyecto Next.js
+- Estructura base del proyecto
+- Configuración de Tailwind CSS
+- Componentes básicos de UI
 
 ## Convenciones de Versionado
 
