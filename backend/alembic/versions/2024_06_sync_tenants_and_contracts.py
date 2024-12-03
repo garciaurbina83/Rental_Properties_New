@@ -130,16 +130,6 @@ def upgrade():
             ALTER TABLE contracts
             ALTER COLUMN monthly_rent TYPE FLOAT USING monthly_rent::float
         """))
-        connection.execute(text("""
-            ALTER TABLE contracts
-            RENAME COLUMN monthly_rent TO rent_amount
-        """))
-        
-        # Renombrar payment_day a payment_due_day
-        connection.execute(text("""
-            ALTER TABLE contracts
-            RENAME COLUMN payment_day TO payment_due_day
-        """))
         
         # Establecer valores por defecto
         connection.execute(text("""
@@ -229,9 +219,7 @@ def downgrade():
                 DROP COLUMN IF EXISTS utilities_included,
                 DROP COLUMN IF EXISTS guarantor_info,
                 DROP COLUMN IF EXISTS terms_and_conditions,
-                DROP COLUMN IF EXISTS special_conditions,
-                ALTER COLUMN rent_amount RENAME TO monthly_rent,
-                ALTER COLUMN payment_due_day RENAME TO payment_day
+                DROP COLUMN IF EXISTS special_conditions
             """))
             
             # Convertir status de vuelta a mayúsculas
