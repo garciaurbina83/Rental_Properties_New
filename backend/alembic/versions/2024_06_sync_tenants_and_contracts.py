@@ -114,42 +114,54 @@ def upgrade():
             """))
             
         # Agregar nuevas columnas
-        with connection.begin_nested():
-            connection.execute(text("""
-                ALTER TABLE contracts
-                ADD COLUMN IF NOT EXISTS contract_number VARCHAR UNIQUE,
-                ADD COLUMN IF NOT EXISTS payment_frequency payment_frequency,
-                ADD COLUMN IF NOT EXISTS payment_method payment_method,
-                ADD COLUMN IF NOT EXISTS utilities_included JSONB,
-                ADD COLUMN IF NOT EXISTS guarantor_info JSONB,
-                ADD COLUMN IF NOT EXISTS terms_and_conditions VARCHAR,
-                ADD COLUMN IF NOT EXISTS special_conditions VARCHAR,
-                ALTER COLUMN monthly_rent TYPE FLOAT USING monthly_rent::float,
-                ALTER COLUMN monthly_rent RENAME TO rent_amount,
-                ALTER COLUMN payment_day RENAME TO payment_due_day
-            """))
-            
-            # Establecer valores por defecto
-            connection.execute(text("""
-                UPDATE contracts 
-                SET payment_frequency = 'monthly'::payment_frequency,
-                    payment_method = 'transfer'::payment_method,
-                    utilities_included = '[]'::jsonb,
-                    terms_and_conditions = 'Términos y condiciones estándar'
-                WHERE payment_frequency IS NULL
-            """))
-            
-            # Hacer NOT NULL las columnas requeridas
-            connection.execute(text("""
-                ALTER TABLE contracts
-                ALTER COLUMN payment_frequency SET NOT NULL,
-                ALTER COLUMN payment_method SET NOT NULL,
-                ALTER COLUMN utilities_included SET NOT NULL,
-                ALTER COLUMN terms_and_conditions SET NOT NULL,
-                ALTER COLUMN payment_frequency SET DEFAULT 'monthly'::payment_frequency,
-                ALTER COLUMN payment_method SET DEFAULT 'transfer'::payment_method,
-                ALTER COLUMN utilities_included SET DEFAULT '[]'::jsonb
-            """))
+        connection.execute(text("""
+            ALTER TABLE contracts
+            ADD COLUMN IF NOT EXISTS contract_number VARCHAR UNIQUE,
+            ADD COLUMN IF NOT EXISTS payment_frequency payment_frequency,
+            ADD COLUMN IF NOT EXISTS payment_method payment_method,
+            ADD COLUMN IF NOT EXISTS utilities_included JSONB,
+            ADD COLUMN IF NOT EXISTS guarantor_info JSONB,
+            ADD COLUMN IF NOT EXISTS terms_and_conditions VARCHAR,
+            ADD COLUMN IF NOT EXISTS special_conditions VARCHAR
+        """))
+        
+        # Convertir y renombrar monthly_rent a rent_amount
+        connection.execute(text("""
+            ALTER TABLE contracts
+            ALTER COLUMN monthly_rent TYPE FLOAT USING monthly_rent::float
+        """))
+        connection.execute(text("""
+            ALTER TABLE contracts
+            RENAME COLUMN monthly_rent TO rent_amount
+        """))
+        
+        # Renombrar payment_day a payment_due_day
+        connection.execute(text("""
+            ALTER TABLE contracts
+            RENAME COLUMN payment_day TO payment_due_day
+        """))
+        
+        # Establecer valores por defecto
+        connection.execute(text("""
+            UPDATE contracts 
+            SET payment_frequency = 'monthly'::payment_frequency,
+                payment_method = 'transfer'::payment_method,
+                utilities_included = '[]'::jsonb,
+                terms_and_conditions = 'Términos y condiciones estándar'
+            WHERE payment_frequency IS NULL
+        """))
+        
+        # Hacer NOT NULL las columnas requeridas
+        connection.execute(text("""
+            ALTER TABLE contracts
+            ALTER COLUMN payment_frequency SET NOT NULL,
+            ALTER COLUMN payment_method SET NOT NULL,
+            ALTER COLUMN utilities_included SET NOT NULL,
+            ALTER COLUMN terms_and_conditions SET NOT NULL,
+            ALTER COLUMN payment_frequency SET DEFAULT 'monthly'::payment_frequency,
+            ALTER COLUMN payment_method SET DEFAULT 'transfer'::payment_method,
+            ALTER COLUMN utilities_included SET DEFAULT '[]'::jsonb
+        """))
             
     except Exception as e:
         print(f"Error updating contracts table: {e}")
