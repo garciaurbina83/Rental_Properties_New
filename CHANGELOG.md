@@ -71,6 +71,13 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
   - Gestión de tickets vencidos
   - Seguimiento de mantenimientos próximos
   - Integración con sistema de notificaciones
+- Sistema de mantenimiento y auditoría
+  - Nueva tabla `audit_log` para rastrear cambios en entidades
+  - Nueva tabla `maintenance_requests` para gestionar solicitudes de mantenimiento
+  - Nueva tabla `maintenance_attachments` para archivos adjuntos
+  - Tipos ENUM para estados y prioridades de mantenimiento
+  - Sistema de seguimiento de costos y fechas
+  - Soporte para múltiples archivos adjuntos por solicitud
 
 ### Changed
 - Rediseño completo del dashboard para mejor organización

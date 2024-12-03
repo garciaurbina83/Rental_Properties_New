@@ -9,6 +9,10 @@
   - [x] Sistema de préstamos y pagos
   - [x] Gestión de documentos de préstamos
   - [x] Tipos enumerados para estados y métodos
+  - [x] Sistema de auditoría y mantenimiento
+    - [x] Tabla audit_log para seguimiento de cambios
+    - [x] Tablas para gestión de mantenimiento
+    - [x] ENUMs para estados y prioridades
 - Sistema de Préstamos (Core)
   - Gestión básica de préstamos
   - Procesamiento de pagos
