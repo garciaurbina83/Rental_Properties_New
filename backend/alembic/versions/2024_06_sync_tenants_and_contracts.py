@@ -32,39 +32,44 @@ def upgrade():
                 CREATE TYPE tenant_status AS ENUM ('active', 'inactive', 'pending', 'blacklisted')
             """))
             
-        # Agregar nuevas columnas a tenants
-        with connection.begin_nested():
-            connection.execute(text("""
-                ALTER TABLE tenants
-                ADD COLUMN IF NOT EXISTS occupation VARCHAR,
-                ADD COLUMN IF NOT EXISTS monthly_income FLOAT,
-                ADD COLUMN IF NOT EXISTS previous_address VARCHAR,
-                ADD COLUMN IF NOT EXISTS preferred_contact_method contact_method,
-                ADD COLUMN IF NOT EXISTS notes VARCHAR,
-                ADD COLUMN IF NOT EXISTS date_of_birth DATE,
-                ADD COLUMN IF NOT EXISTS employer VARCHAR,
-                ADD COLUMN IF NOT EXISTS status tenant_status
-            """))
-            
-            # Establecer valores por defecto
-            connection.execute(text("""
-                UPDATE tenants 
-                SET preferred_contact_method = 'email'::contact_method,
-                    status = CASE 
-                        WHEN is_active THEN 'active'::tenant_status 
-                        ELSE 'inactive'::tenant_status 
-                    END
-                WHERE preferred_contact_method IS NULL
-            """))
-            
-            # Hacer NOT NULL las columnas requeridas
-            connection.execute(text("""
-                ALTER TABLE tenants
-                ALTER COLUMN preferred_contact_method SET NOT NULL,
-                ALTER COLUMN status SET NOT NULL,
-                ALTER COLUMN preferred_contact_method SET DEFAULT 'email'::contact_method,
-                ALTER COLUMN status SET DEFAULT 'pending'::tenant_status
-            """))
+        # Eliminar la columna si existe
+        connection.execute(text("""
+            ALTER TABLE tenants
+            DROP COLUMN IF EXISTS preferred_contact_method,
+            DROP COLUMN IF EXISTS status
+        """))
+        
+        # Agregar las columnas con los nuevos tipos
+        connection.execute(text("""
+            ALTER TABLE tenants
+            ADD COLUMN IF NOT EXISTS occupation VARCHAR,
+            ADD COLUMN IF NOT EXISTS monthly_income FLOAT,
+            ADD COLUMN IF NOT EXISTS previous_address VARCHAR,
+            ADD COLUMN IF NOT EXISTS preferred_contact_method contact_method,
+            ADD COLUMN IF NOT EXISTS notes VARCHAR,
+            ADD COLUMN IF NOT EXISTS date_of_birth DATE,
+            ADD COLUMN IF NOT EXISTS employer VARCHAR,
+            ADD COLUMN IF NOT EXISTS status tenant_status
+        """))
+        
+        # Establecer valores por defecto
+        connection.execute(text("""
+            UPDATE tenants 
+            SET preferred_contact_method = 'email'::contact_method,
+                status = CASE 
+                    WHEN is_active THEN 'active'::tenant_status 
+                    ELSE 'inactive'::tenant_status 
+                END
+        """))
+        
+        # Hacer NOT NULL las columnas requeridas
+        connection.execute(text("""
+            ALTER TABLE tenants
+            ALTER COLUMN preferred_contact_method SET NOT NULL,
+            ALTER COLUMN status SET NOT NULL,
+            ALTER COLUMN preferred_contact_method SET DEFAULT 'email'::contact_method,
+            ALTER COLUMN status SET DEFAULT 'pending'::tenant_status
+        """))
             
     except Exception as e:
         print(f"Error updating tenants table: {e}")
