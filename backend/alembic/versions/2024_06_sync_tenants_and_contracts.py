@@ -125,12 +125,6 @@ def upgrade():
             ADD COLUMN IF NOT EXISTS special_conditions VARCHAR
         """))
         
-        # Convertir y renombrar monthly_rent a rent_amount
-        connection.execute(text("""
-            ALTER TABLE contracts
-            ALTER COLUMN monthly_rent TYPE FLOAT USING monthly_rent::float
-        """))
-        
         # Establecer valores por defecto
         connection.execute(text("""
             UPDATE contracts 
