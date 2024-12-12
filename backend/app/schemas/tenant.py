@@ -1,13 +1,13 @@
 from typing import Optional, List
 from datetime import date
-from pydantic import BaseModel, EmailStr, constr
-from ..models.tenant import ContactMethod, TenantStatus
+from decimal import Decimal
+from pydantic import BaseModel, Field
 
 class TenantReferenceBase(BaseModel):
     name: str
     relationship: str
-    phone: constr(min_length=8, max_length=20)
-    email: Optional[EmailStr] = None
+    phone: str
+    email: Optional[str] = None
     notes: Optional[str] = None
 
 class TenantReferenceCreate(TenantReferenceBase):
@@ -20,7 +20,7 @@ class TenantReference(TenantReferenceBase):
     updated_at: date
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class TenantDocumentBase(BaseModel):
     document_type: str
@@ -39,59 +39,37 @@ class TenantDocument(TenantDocumentBase):
     updated_at: date
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class TenantBase(BaseModel):
-    first_name: str
-    last_name: str
-    email: EmailStr
-    phone: constr(min_length=8, max_length=20)
-    occupation: Optional[str] = None
-    monthly_income: Optional[float] = None
-    previous_address: Optional[str] = None
-    identification_type: str
-    identification_number: str
-    is_active: bool = True
-    preferred_contact_method: ContactMethod = ContactMethod.EMAIL
-    notes: Optional[str] = None
-    emergency_contact_name: str
-    emergency_contact_phone: constr(min_length=8, max_length=20)
-    date_of_birth: Optional[date] = None
-    employer: Optional[str] = None
-    status: TenantStatus = TenantStatus.ACTIVE
+    first_name: str = Field(..., min_length=1)
+    last_name: str = Field(..., min_length=1)
+    property_id: int = Field(...)
+    lease_start: date
+    lease_end: date
+    deposit: Decimal = Field(..., ge=0)
+    monthly_rent: Decimal = Field(..., ge=0)
+    payment_day: int = Field(..., ge=1, le=31)
 
 class TenantCreate(TenantBase):
-    references: Optional[List[TenantReferenceCreate]] = []
-    documents: Optional[List[TenantDocumentCreate]] = []
+    pass
 
 class TenantUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    phone: Optional[constr(min_length=8, max_length=20)] = None
-    occupation: Optional[str] = None
-    monthly_income: Optional[float] = None
-    previous_address: Optional[str] = None
-    identification_type: Optional[str] = None
-    identification_number: Optional[str] = None
-    is_active: Optional[bool] = None
-    preferred_contact_method: Optional[ContactMethod] = None
-    notes: Optional[str] = None
-    emergency_contact_name: Optional[str] = None
-    emergency_contact_phone: Optional[constr(min_length=8, max_length=20)] = None
-    date_of_birth: Optional[date] = None
-    employer: Optional[str] = None
-    status: Optional[TenantStatus] = None
+    first_name: Optional[str] = Field(None, min_length=1)
+    last_name: Optional[str] = Field(None, min_length=1)
+    property_id: Optional[int] = None
+    lease_start: Optional[date] = None
+    lease_end: Optional[date] = None
+    deposit: Optional[Decimal] = Field(None, ge=0)
+    monthly_rent: Optional[Decimal] = Field(None, ge=0)
+    payment_day: Optional[int] = Field(None, ge=1, le=31)
 
-class Tenant(TenantBase):
+class TenantResponse(TenantBase):
     id: int
-    references: List[TenantReference] = []
-    documents: List[TenantDocument] = []
     created_at: date
     updated_at: date
+    references: List[TenantReference] = []
+    documents: List[TenantDocument] = []
 
     class Config:
-        orm_mode = True
-
-class TenantInDB(Tenant):
-    pass
+        from_attributes = True

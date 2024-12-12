@@ -8,16 +8,20 @@ from fastapi.openapi.docs import (
     get_redoc_html
 )
 from fastapi.openapi.utils import get_openapi
-from fastapi.security import HTTPBearer
+from dotenv import load_dotenv
+import os
 
 from .core.config import settings
-from .routers import property, auth
+from .api.v1.api import api_router
 from datetime import datetime
+
+# Cargar variables de entorno
+load_dotenv()
 
 # Crear la aplicación FastAPI
 app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
+    title=settings.PROJECT_NAME,
+    version="1.0.0",
     description="""
     # API de Gestión de Propiedades en Alquiler
 
@@ -27,17 +31,14 @@ app = FastAPI(
     * Gestión de inquilinos
     * Gestión de contratos
     * Gestión de pagos
-    * Autenticación y autorización
     * Reportes y análisis
     
     ## Características principales
     
-    * Autenticación JWT
     * Documentación interactiva
     * Validación de datos
     * Manejo de errores consistente
     * Paginación y filtrado
-    * Caché con Redis
     * Monitoreo y logging
     
     ## Tecnologías utilizadas
@@ -48,7 +49,6 @@ app = FastAPI(
     * Pydantic
     * Redis
     * Alembic
-    * JWT
     * OpenAPI (Swagger)
     """,
     terms_of_service="https://example.com/terms/",
@@ -70,73 +70,32 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configurar CORS
+origins = [
+    "http://localhost:3000",  # Frontend Next.js
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
-# Incluir routers
-app.include_router(
-    auth.router,
-    prefix=settings.API_V1_STR,
-    tags=["auth"],
-    responses={401: {"description": "No autorizado"}, 403: {"description": "Permiso denegado"}},
-)
-
-app.include_router(
-    property.router,
-    prefix=settings.API_V1_STR,
-    tags=["properties"],
-    responses={404: {"description": "Propiedad no encontrada"}},
-)
-
-# Esquema de seguridad Bearer
-security_scheme = HTTPBearer()
+# Incluir todas las rutas bajo el prefijo /api/v1
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
-
     openapi_schema = get_openapi(
         title=app.title,
         version=app.version,
         description=app.description,
         routes=app.routes,
     )
-
-    # Agregar componentes de seguridad y schemas
-    openapi_schema["components"] = {
-        "securitySchemes": {
-            "BearerAuth": {
-                "type": "http",
-                "scheme": "bearer",
-                "bearerFormat": "JWT",
-                "description": """
-                Autenticación JWT a través de Clerk.
-                
-                Para obtener un token:
-                1. Regístrate o inicia sesión en Clerk
-                2. Obtén tu token JWT
-                3. Úsalo en el formato: Bearer <token>
-                """
-            }
-        },
-        "schemas": {}  # Los schemas se agregarán automáticamente
-    }
-
-    # Aplicar seguridad globalmente
-    openapi_schema["security"] = [{"BearerAuth": []}]
-
-    # Personalizar la apariencia
-    openapi_schema["info"]["x-logo"] = {
-        "url": "/static/logo.svg",
-        "backgroundColor": "#FFFFFF",
-        "altText": "API Logo"
-    }
-
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
@@ -167,7 +126,7 @@ async def redoc_html():
         with_google_fonts=False,
     )
 
-@app.get("/", tags=["health"])
+@app.get("/")
 async def root():
     """
     Endpoint de salud para verificar que la API está funcionando
@@ -176,18 +135,15 @@ async def root():
         dict: Estado actual de la API
     """
     return {
-        "status": "online",
+        "status": "ok",
+        "message": "API is running",
         "timestamp": datetime.now().isoformat(),
-        "version": settings.APP_VERSION,
-        "environment": settings.ENVIRONMENT
+        "version": app.version
     }
 
 @app.get("/health")
 async def health_check():
-    return {
-        "status": "healthy",
-        "environment": settings.ENVIRONMENT
-    }
+    return {"status": "healthy"}
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -202,7 +158,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         JSONResponse: Respuesta de error formateada
     """
     error_response = {
-        "detail": str(exc),
+        "status": "error",
+        "message": str(exc),
         "type": exc.__class__.__name__,
         "path": request.url.path
     }
@@ -211,7 +168,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code = exc.status_code
     else:
         status_code = 500
-        error_response["detail"] = "Internal Server Error"
+        error_response["details"] = "Internal Server Error"
     
     return JSONResponse(
         status_code=status_code,
