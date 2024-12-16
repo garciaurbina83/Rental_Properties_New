@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+        }
+        .content {
+            padding: 20px;
+        }
+        .expense-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>New Expense Requires Approval</h2>
+        </div>
+        
+        <div class="content">
+            <p>Hello,</p>
+            
+            <p>A new expense has been submitted and requires your approval.</p>
+            
+            <div class="expense-details">
+                <h3>Expense Details:</h3>
+                <p><strong>Amount:</strong> ${{ amount }}</p>
+                <p><strong>Category:</strong> {{ category }}</p>
+                <p><strong>Created By:</strong> {{ created_by }}</p>
+                <p><strong>Date:</strong> {{ created_at }}</p>
+                {% if description %}
+                <p><strong>Description:</strong> {{ description }}</p>
+                {% endif %}
+            </div>
+            
+            <p>Please review this expense at your earliest convenience.</p>
+            
+            <a href="{{ approval_url }}" class="button">Review Expense</a>
+            
+            <p>If you have any questions, please contact the expense creator directly.</p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message, please do not reply directly to this email.</p>
+            <p>© {{ year }} {{ company_name }}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

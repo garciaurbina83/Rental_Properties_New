@@ -23,7 +23,7 @@
     --secondary-foreground: 210 40% 98%;
 
     --muted: 223 47% 11%;
-    --muted-foreground: 215.4 16.3% 56.9%;
+    --muted-foreground: 215 20.2% 65.1%;
 
     --accent: 216 34% 17%;
     --accent-foreground: 210 40% 98%;
@@ -199,4 +199,106 @@
 .chart-container:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+}
+
+/* DatePicker Custom Styles */
+.datepicker-container {
+  @apply relative w-full;
+}
+
+.datepicker-popper {
+  @apply z-50 !important;
+}
+
+.datepicker-calendar {
+  @apply border-0 !important;
+}
+
+.react-datepicker {
+  @apply !bg-card !border-border/5 !rounded-lg !shadow-lg !p-3 !font-sans;
+}
+
+.react-datepicker__header {
+  @apply !bg-background/50 !border-b !border-border/5 !rounded-t-lg !p-3;
+}
+
+.react-datepicker__month-container {
+  @apply !bg-card;
+}
+
+.react-datepicker__current-month {
+  @apply !text-foreground !font-semibold !mb-3;
+}
+
+.react-datepicker__day-names {
+  @apply !mt-2;
+}
+
+.react-datepicker__day-name {
+  @apply !text-muted-foreground !text-xs !w-8 !h-8 !leading-8 !m-0;
+}
+
+.react-datepicker__day {
+  @apply !text-foreground !text-sm !w-8 !h-8 !leading-8 !m-0 !rounded-md !transition-colors;
+}
+
+.react-datepicker__day:hover:not(.react-datepicker__day--disabled):not(.react-datepicker__day--selected) {
+  @apply !bg-accent/50 !text-accent-foreground !rounded-md;
+}
+
+.react-datepicker__day--selected {
+  @apply !bg-primary !text-primary-foreground !font-medium;
+}
+
+.react-datepicker__day--keyboard-selected {
+  @apply !bg-accent !text-accent-foreground;
+}
+
+.react-datepicker__day--disabled {
+  @apply !text-muted-foreground/50 !cursor-not-allowed hover:!bg-transparent;
+}
+
+.react-datepicker__day--outside-month {
+  @apply !text-muted-foreground/30;
+}
+
+.react-datepicker__navigation {
+  @apply !top-4;
+}
+
+.react-datepicker__navigation-icon::before {
+  @apply !border-foreground;
+}
+
+.react-datepicker__month-select,
+.react-datepicker__year-select {
+  @apply !bg-background !text-foreground !border !border-border/5 !rounded-md !px-2 !py-1 !cursor-pointer;
+}
+
+.react-datepicker__month-select:focus,
+.react-datepicker__year-select:focus {
+  @apply !outline-none !ring-2 !ring-ring !ring-offset-2;
+}
+
+.react-datepicker__month-dropdown,
+.react-datepicker__year-dropdown {
+  @apply !bg-card !border !border-border/5 !rounded-md !shadow-lg;
+}
+
+.react-datepicker__month-option,
+.react-datepicker__year-option {
+  @apply !text-foreground hover:!bg-accent hover:!text-accent-foreground !py-1 !px-2;
+}
+
+.react-datepicker__month-option--selected,
+.react-datepicker__year-option--selected {
+  @apply !bg-primary/20 !text-primary;
+}
+
+.react-datepicker__day--today {
+  @apply !bg-accent/20 !text-accent-foreground !font-semibold;
+}
+
+.react-datepicker__triangle {
+  @apply !hidden;
 }

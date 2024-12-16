@@ -1,0 +1,4 @@
+# Global project dependencies
+-r backend/requirements.txt
+
+# Frontend dependencies are managed by package.json in the frontend directory

@@ -1,0 +1,151 @@
+/* Personalización de Swagger UI */
+:root {
+    --primary-color: #1a73e8;
+    --secondary-color: #4285f4;
+    --background-color: #ffffff;
+    --text-color: #202124;
+    --border-color: #dadce0;
+}
+
+.swagger-ui {
+    font-family: 'Google Sans', 'Roboto', sans-serif;
+}
+
+.swagger-ui .topbar {
+    background-color: var(--primary-color);
+    padding: 1rem;
+}
+
+.swagger-ui .topbar .download-url-wrapper {
+    display: none;
+}
+
+.swagger-ui .info {
+    margin: 2rem 0;
+}
+
+.swagger-ui .info .title {
+    color: var(--text-color);
+    font-size: 2.5rem;
+}
+
+.swagger-ui .info .description {
+    color: var(--text-color);
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.swagger-ui .opblock {
+    border-radius: 8px;
+    margin: 0 0 1rem;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.swagger-ui .opblock .opblock-summary {
+    padding: 1rem;
+}
+
+.swagger-ui .opblock .opblock-summary-method {
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.swagger-ui .opblock.opblock-get {
+    border-color: var(--secondary-color);
+}
+
+.swagger-ui .opblock.opblock-post {
+    border-color: #34a853;
+}
+
+.swagger-ui .opblock.opblock-put {
+    border-color: #fbbc05;
+}
+
+.swagger-ui .opblock.opblock-delete {
+    border-color: #ea4335;
+}
+
+.swagger-ui .btn {
+    border-radius: 4px;
+    font-weight: 500;
+    text-transform: none;
+    padding: 0.5rem 1rem;
+}
+
+.swagger-ui .btn.execute {
+    background-color: var(--primary-color);
+}
+
+.swagger-ui .btn.authorize {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.swagger-ui section.models {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin: 2rem 0;
+}
+
+.swagger-ui section.models .model-container {
+    margin: 0;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.swagger-ui .responses-table {
+    border-radius: 4px;
+}
+
+.swagger-ui .parameter__name {
+    font-weight: 500;
+}
+
+.swagger-ui .parameter__type {
+    color: var(--secondary-color);
+}
+
+.swagger-ui input[type=text],
+.swagger-ui textarea {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.5rem;
+}
+
+.swagger-ui select {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    height: 2.5rem;
+}
+
+/* Estilo para el modo oscuro */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background-color: #202124;
+        --text-color: #ffffff;
+        --border-color: #5f6368;
+    }
+
+    .swagger-ui {
+        background-color: var(--background-color);
+        color: var(--text-color);
+    }
+
+    .swagger-ui .info .title,
+    .swagger-ui .info .description {
+        color: var(--text-color);
+    }
+
+    .swagger-ui .opblock {
+        background-color: #2d2d2d;
+    }
+
+    .swagger-ui input[type=text],
+    .swagger-ui textarea,
+    .swagger-ui select {
+        background-color: #2d2d2d;
+        color: var(--text-color);
+    }
+}

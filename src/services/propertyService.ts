@@ -49,165 +49,83 @@ api.interceptors.response.use(
 );
 
 export const propertyService = {
-  async getProperties(skip = 0, limit = 10, filters = {}) {
+  async getProperties(params?: any): Promise<Property[]> {
     try {
-      const params = {
-        skip,
-        limit,
-        ...filters,
-      };
-
-      const response = await api.get('/properties', { 
-        params,
-        timeout: 5000, // 5 second timeout
-      });
-
-      // Validar la respuesta
-      if (!response.data) {
-        throw new Error('No data received from API');
-      }
-
-      // Asegurar que la respuesta es un array
-      const properties = Array.isArray(response.data) ? response.data : 
-                        Array.isArray(response.data.items) ? response.data.items : 
-                        [];
-
-      return properties;
-    } catch (error: any) {
-      console.error('Error in getProperties:', error);
-      
-      if (error.code === 'ECONNREFUSED') {
-        throw new Error('Could not connect to the API. Please check if the backend server is running.');
-      }
-      
-      if (error.response) {
-        throw new Error(`Server error: ${error.response.status} - ${error.response.data?.detail || error.message}`);
-      } else if (error.request) {
-        throw new Error('No response received from server. Please check if the backend is running.');
-      } else {
-        throw new Error(`Error making request: ${error.message}`);
-      }
-    }
-  },
-
-  async getProperty(id: number) {
-    try {
-      console.log('Making request to:', `${API_URL}/api/v1/properties/${id}`);
-
-      const response = await api.get(`/properties/${id}`);
-
-      if (!response.data) {
-        throw new Error('No data received from API');
-      }
-
+      const response = await api.get('/properties', { params });
       return response.data;
-    } catch (error: any) {
-      console.error('Error in getProperty:', error);
-      if (error.response) {
-        throw new Error(`Server error: ${error.response.status} - ${error.response.data?.detail || error.message}`);
-      } else if (error.request) {
-        throw new Error('No response received from server. Please check if the backend is running.');
-      } else {
-        throw new Error(`Error making request: ${error.message}`);
-      }
-    }
-  },
-
-  async createProperty(property: PropertyCreate) {
-    try {
-      console.log('Creating property with data:', property);
-      
-      if (property.property_type === PropertyType.UNIT && !property.parent_id) {
-        throw new Error('Units must have a parent property');
-      }
-
-      // Convert property_type to the expected format
-      const propertyData = {
-        ...property,
-        property_type: property.property_type,
-        status: PropertyStatus.AVAILABLE,
-      };
-
-      console.log('Sending formatted data to API:', JSON.stringify(propertyData, null, 2));
-      
-      const response = await api.post('/properties', propertyData);
-
-      if (!response.data) {
-        throw new Error('No data received from API');
-      }
-
-      return response.data;
-    } catch (error: any) {
-      console.error('Error in createProperty:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
+    } catch (error) {
+      console.error('Error fetching properties:', error);
       throw error;
     }
   },
 
-  async updateProperty(id: number, property: any) {
+  async getProperty(id: number): Promise<Property> {
     try {
-      console.log('Making request to:', `${API_URL}/api/v1/properties/${id}`);
-      console.log('With data:', property);
+      const response = await api.get(`/properties/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching property ${id}:`, error);
+      throw error;
+    }
+  },
 
+  async createProperty(property: PropertyCreate): Promise<Property> {
+    try {
+      // Asegurar que todos los campos requeridos estén presentes
+      const propertyData = {
+        name: property.name,
+        address: property.address,
+        city: property.city,
+        state: property.state,
+        zip_code: property.zip_code,
+        property_type: property.property_type,
+        bedrooms: property.bedrooms || 0,
+        bathrooms: property.bathrooms || 0,
+        status: property.status || 'available',
+        is_active: property.is_active ?? true,
+        parent_property_id: property.parent_property_id,
+      };
+
+      console.log('Creating property with data:', propertyData);
+      const response = await api.post('/properties', propertyData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating property:', error);
+      throw error;
+    }
+  },
+
+  async updateProperty(id: number, property: Partial<PropertyCreate>): Promise<Property> {
+    try {
       const response = await api.put(`/properties/${id}`, property);
-
-      if (!response.data) {
-        throw new Error('No data received from API');
-      }
-
       return response.data;
-    } catch (error: any) {
-      console.error('Error in updateProperty:', error);
-      if (error.response) {
-        throw new Error(`Server error: ${error.response.status} - ${error.response.data?.detail || error.message}`);
-      } else if (error.request) {
-        throw new Error('No response received from server. Please check if the backend is running.');
-      } else {
-        throw new Error(`Error making request: ${error.message}`);
-      }
+    } catch (error) {
+      console.error(`Error updating property ${id}:`, error);
+      throw error;
     }
   },
 
-  async deleteProperty(id: number) {
+  async deleteProperty(id: number): Promise<void> {
     try {
-      console.log('Making request to:', `${API_URL}/api/v1/properties/${id}`);
-
       await api.delete(`/properties/${id}`);
-    } catch (error: any) {
-      console.error('Error in deleteProperty:', error);
-      if (error.response) {
-        throw new Error(`Server error: ${error.response.status} - ${error.response.data?.detail || error.message}`);
-      } else if (error.request) {
-        throw new Error('No response received from server. Please check if the backend is running.');
-      } else {
-        throw new Error(`Error making request: ${error.message}`);
-      }
+    } catch (error) {
+      console.error(`Error deleting property ${id}:`, error);
+      throw error;
     }
   },
 
-  async searchProperties(searchTerm: string, params?: any) {
+  async searchProperties(searchTerm: string, params?: any): Promise<Property[]> {
     try {
-      console.log('Making request to:', `${API_URL}/api/v1/properties/search/${searchTerm}`);
-      console.log('With params:', params);
-
-      const response = await api.get(`/properties/search/${searchTerm}`, { params });
-
-      if (!response.data) {
-        throw new Error('No data received from API');
-      }
-
+      const response = await api.get('/properties/search', {
+        params: {
+          q: searchTerm,
+          ...params,
+        },
+      });
       return response.data;
-    } catch (error: any) {
-      console.error('Error in searchProperties:', error);
-      if (error.response) {
-        throw new Error(`Server error: ${error.response.status} - ${error.response.data?.detail || error.message}`);
-      } else if (error.request) {
-        throw new Error('No response received from server. Please check if the backend is running.');
-      } else {
-        throw new Error(`Error making request: ${error.message}`);
-      }
+    } catch (error) {
+      console.error('Error searching properties:', error);
+      throw error;
     }
   },
 };

@@ -31,20 +31,20 @@ const getStatusColor = (status: PropertyStatus) => {
 
 export const columns: ColumnDef<Property>[] = [
   {
-    accessorKey: 'name',
-    header: 'Property',
+    accessorKey: 'property_type',
+    header: 'Tipo',
     cell: ({ row }) => {
-      const property = row.original;
+      const type = row.getValue('property_type') as string;
       return (
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-            {property.property_type === PropertyType.MAIN ? (
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <Home className="h-4 w-4 text-muted-foreground" />
-            )}
-          </div>
-          <span className="font-medium">{property.name}</span>
+        <div className="flex items-center">
+          {type === 'PRINCIPAL' ? (
+            <Building2 className="h-4 w-4 text-blue-500" />
+          ) : (
+            <Home className="h-4 w-4 text-green-500" />
+          )}
+          <span className="ml-2">
+            {type === 'PRINCIPAL' ? 'Principal' : 'Unit'}
+          </span>
         </div>
       );
     },
@@ -59,6 +59,19 @@ export const columns: ColumnDef<Property>[] = [
           {property.address}, {property.city}, {property.state} {property.zip_code}
         </div>
       );
+    },
+  },
+  {
+    accessorKey: 'name',
+    header: 'Unit',
+    cell: ({ row }) => {
+      const type = row.getValue('property_type') as string;
+      const name = row.original.name;
+      
+      if (type === 'UNIT' && name) {
+        return <div className="font-medium">{name}</div>;
+      }
+      return null;
     },
   },
   {

@@ -1,36 +1,141 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rental Properties Management System
 
-## Getting Started
+Sistema integral para la gestión y administración de propiedades de renta.
 
-First, run the development server:
+## Tecnologías Principales
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Backend:** Python (FastAPI)
+- **Frontend Web:** React
+- **Frontend Mobile:** React Native
+- **Base de datos:** PostgreSQL
+- **Autenticación:** Clerk
+- **Documentación:** Swagger UI y ReDoc
+
+## Documentación
+
+- [API Documentation](docs/api.md) - Documentación detallada de los endpoints de la API
+- Swagger UI (disponible en `/docs` cuando el servidor está corriendo)
+- ReDoc (disponible en `/redoc` cuando el servidor está corriendo)
+
+## Estructura del Proyecto
+
+```
+rental-properties/
+├── backend/           # Servidor FastAPI
+│   ├── app/          # Código principal
+│   │   ├── core/     # Configuración y utilidades
+│   │   ├── routers/  # Endpoints de la API
+│   │   ├── schemas/  # Modelos Pydantic
+│   │   └── static/   # Archivos estáticos
+├── frontend/         # Aplicación web React
+├── mobile/          # Aplicación móvil React Native
+└── docs/            # Documentación
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Requisitos Previos
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Python 3.8+
+- Node.js 16+
+- PostgreSQL 13+
+- npm o yarn
+- Cuenta en Clerk (para autenticación)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Configuración del Entorno
 
-## Learn More
+1. Clonar el repositorio
+```bash
+git clone [url-del-repositorio]
+```
 
-To learn more about Next.js, take a look at the following resources:
+2. Configurar el backend
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. Configurar variables de entorno
+Crear un archivo `.env` en la carpeta `backend` con:
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+CLERK_SECRET_KEY=your_clerk_secret_key
+CLERK_FRONTEND_API=your_clerk_frontend_api
+ENVIRONMENT=development
+CORS_ORIGINS=["http://localhost:3000"]
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. Configurar el frontend
+```bash
+cd frontend
+npm install
+```
 
-## Deploy on Vercel
+## Características Principales
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Backend (FastAPI)
+- **Autenticación JWT** con Clerk
+- **RBAC (Control de Acceso Basado en Roles)**:
+  - Admin
+  - Property Manager
+  - Tenant
+  - Maintenance Staff
+  - Viewer
+- **API RESTful** con endpoints para:
+  - Gestión de propiedades
+  - Administración de inquilinos
+  - Contratos de alquiler
+  - Sistema de pagos
+  - Tickets de mantenimiento
+- **Documentación Interactiva**:
+  - Swagger UI: `/docs`
+  - ReDoc: `/redoc`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Seguridad
+- Autenticación JWT con Clerk
+- Protección CORS configurada
+- Validación de tokens y permisos
+- Manejo seguro de errores
+- Logs de auditoría
+
+## Desarrollo
+
+1. Iniciar el backend:
+```bash
+cd backend
+uvicorn app.main:app --reload
+```
+
+2. Acceder a la documentación:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## Autenticación
+
+1. Registrarse en [Clerk](https://clerk.dev)
+2. Obtener un token JWT
+3. Usar el token en las peticiones:
+   ```bash
+   curl -H "Authorization: Bearer <tu-token>" http://localhost:8000/api/v1/properties
+   ```
+
+## Endpoints Principales
+
+- `GET /api/v1/properties`: Listar propiedades
+- `POST /api/v1/properties`: Crear propiedad
+- `GET /api/v1/tenants`: Listar inquilinos
+- `POST /api/v1/contracts`: Crear contrato
+- `GET /api/v1/payments`: Listar pagos
+- `POST /api/v1/maintenance`: Crear ticket de mantenimiento
+
+## Contribución
+
+1. Fork el repositorio
+2. Crear una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abrir un Pull Request
+
+## Licencia
+
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.

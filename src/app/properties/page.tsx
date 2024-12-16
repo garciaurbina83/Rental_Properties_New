@@ -31,6 +31,7 @@ export default function PropertiesPage() {
       setIsLoading(true);
       setError(null);
       const data = await propertyService.getProperties();
+      console.log('Fetched properties:', data);
       setProperties(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error('Error fetching properties:', err);
@@ -199,6 +200,8 @@ export default function PropertiesPage() {
               setProperties([...properties, newProperty]);
             }
             setShowForm(false);
+            // Refrescar los datos después de crear la propiedad
+            await fetchProperties();
           } catch (err: any) {
             console.error('Error adding property:', err);
           }
