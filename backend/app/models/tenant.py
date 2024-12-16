@@ -1,53 +1,26 @@
-from sqlalchemy import Column, String, Integer, Date, Boolean, Enum, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, DateTime
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from .base import BaseModel
-import enum
 
-class ContactMethod(str, enum.Enum):
-    EMAIL = "email"
-    PHONE = "phone"
-    WHATSAPP = "whatsapp"
+from app.models.base import Base
 
-class TenantStatus(str, enum.Enum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    PENDING = "pending"
-    BLACKLISTED = "blacklisted"
-
-class Tenant(BaseModel):
+class Tenant(Base):
     __tablename__ = "tenants"
 
-    # Información personal
-    first_name = Column(String)
-    last_name = Column(String)
-    email = Column(String, unique=True, index=True)
-    phone = Column(String)
-    occupation = Column(String)
-    monthly_income = Column(Float)
-    previous_address = Column(String)
-    
-    # Documentos
-    identification_type = Column(String)  # DNI, Pasaporte, etc.
-    identification_number = Column(String)
-    
-    # Estado y preferencias
-    is_active = Column(Boolean, default=True)
-    preferred_contact_method = Column(Enum(ContactMethod), default=ContactMethod.EMAIL)
-    notes = Column(String, nullable=True)
-    
-    # Información adicional
-    emergency_contact_name = Column(String)
-    emergency_contact_phone = Column(String)
-    date_of_birth = Column(Date)
-    employer = Column(String, nullable=True)
-    status = Column(Enum(TenantStatus), default=TenantStatus.PENDING)
-    
-    # Relaciones
-    contracts = relationship("Contract", back_populates="tenant")
-    maintenance_tickets = relationship("MaintenanceTicket", back_populates="tenant")
-    references = relationship("TenantReference", back_populates="tenant", cascade="all, delete-orphan")
-    documents = relationship("TenantDocument", back_populates="tenant", cascade="all, delete-orphan")
-    maintenance_requests = relationship("MaintenanceRequest", back_populates="tenant")
+    id = Column(Integer, primary_key=True, index=True)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    property_id = Column(Integer, ForeignKey("properties.id"), index=True)
+    lease_start = Column(Date, nullable=False)
+    lease_end = Column(Date, nullable=False)
+    deposit = Column(Numeric(10, 2), nullable=False)
+    monthly_rent = Column(Numeric(10, 2), nullable=False)
+    payment_day = Column(Integer, nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
-    def __repr__(self):
-        return f"<Tenant {self.first_name} {self.last_name}>"
+    # Relationships
+    property = relationship("Property", back_populates="tenants")
+
+    class Config:
+        orm_mode = True
