@@ -35,7 +35,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r backend/requirements.txt
+        pip install -r frontend-next/backend/requirements.txt
         
     - name: Run tests
       env:
@@ -57,5 +57,5 @@ jobs:
         CLERK_PUBLISHABLE_KEY: "test_clerk_publishable_key"
         BACKEND_CORS_ORIGINS: '["http://localhost:3000"]'
       run: |
-        cd backend
+        cd frontend-next/backend
         pytest tests/ -v
