@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8d7da;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+        }
+        .content {
+            padding: 20px;
+        }
+        .payment-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .warning {
+            color: #721c24;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Alerta de Pago Atrasado</h2>
+        </div>
+        <div class="content">
+            <p>Estimado/a {{ tenant_name }},</p>
+            
+            <div class="warning">
+                <p>Le informamos que su pago se encuentra atrasado por {{ days_late }} días.</p>
+            </div>
+            
+            <div class="payment-details">
+                <h3>Detalles del Pago</h3>
+                <ul>
+                    <li><strong>Contrato:</strong> {{ contract_number }}</li>
+                    <li><strong>Monto original:</strong> ${{ amount }}</li>
+                    <li><strong>Cargo por mora:</strong> ${{ late_fee }}</li>
+                    <li><strong>Monto total a pagar:</strong> ${{ amount + late_fee }}</li>
+                    <li><strong>Fecha de vencimiento original:</strong> {{ due_date }}</li>
+                </ul>
+            </div>
+            
+            <p>Por favor, realice el pago lo antes posible para evitar cargos adicionales por mora.</p>
+            
+            <p>Si ya realizó el pago, por favor ignore este mensaje y proporcione el comprobante de pago.</p>
+            
+            <p>Si tiene alguna dificultad para realizar el pago, por favor contáctenos para discutir opciones de pago.</p>
+            
+            <p>Saludos cordiales,<br>
+            El equipo de administración</p>
+        </div>
+        <div class="footer">
+            Este es un mensaje automático, por favor no responda a este correo.
+        </div>
+    </div>
+</body>
+</html>

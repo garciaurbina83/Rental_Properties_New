@@ -1,0 +1,52 @@
+groups:
+  - name: api_alerts
+    rules:
+      # Alerta de latencia alta
+      - alert: HighLatency
+        expr: rate(request_duration_seconds_sum[5m]) / rate(request_duration_seconds_count[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alta latencia en la API"
+          description: "El tiempo de respuesta promedio es superior a 1 segundo en los últimos 5 minutos"
+
+      # Alerta de tasa de error alta
+      - alert: HighErrorRate
+        expr: sum(rate(errors_total[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Alta tasa de errores en la API"
+          description: "La tasa de errores es superior al 5% en los últimos 5 minutos"
+
+      # Alerta de muchas conexiones de base de datos
+      - alert: HighDBConnections
+        expr: db_connections > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Muchas conexiones a la base de datos"
+          description: "El número de conexiones a la base de datos es superior a 80"
+
+      # Alerta de muchas solicitudes activas
+      - alert: HighActiveRequests
+        expr: active_requests > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Muchas solicitudes activas"
+          description: "El número de solicitudes activas es superior a 100"
+
+      # Alerta de operaciones lentas en la base de datos
+      - alert: SlowDBOperations
+        expr: rate(db_operation_duration_seconds_sum[5m]) / rate(db_operation_duration_seconds_count[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Operaciones lentas en la base de datos"
+          description: "Las operaciones de base de datos están tomando más de 500ms en promedio"

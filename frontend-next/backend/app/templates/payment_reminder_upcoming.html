@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Recordatorio de Pago Próximo</h2>
+        </div>
+        <div class="content">
+            <p>Estimado/a {{ tenant_name }},</p>
+            
+            <p>Le recordamos que tiene un pago próximo a vencer:</p>
+            
+            <ul>
+                <li><strong>Contrato:</strong> {{ contract_number }}</li>
+                <li><strong>Concepto:</strong> {{ payment_concept }}</li>
+                <li><strong>Monto:</strong> ${{ amount }}</li>
+                <li><strong>Fecha de vencimiento:</strong> {{ due_date }}</li>
+            </ul>
+            
+            <p>Por favor, asegúrese de realizar el pago antes de la fecha de vencimiento para evitar cargos por mora.</p>
+            
+            <p>Si ya realizó el pago, por favor ignore este mensaje.</p>
+            
+            <p>Saludos cordiales,<br>
+            El equipo de administración</p>
+        </div>
+        <div class="footer">
+            Este es un mensaje automático, por favor no responda a este correo.
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,130 @@
+{
+    "common": {
+        "yes": "Yes",
+        "no": "No",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "create": "Create",
+        "search": "Search",
+        "filter": "Filter",
+        "loading": "Loading...",
+        "error": "Error",
+        "success": "Success",
+        "warning": "Warning",
+        "info": "Information"
+    },
+    "auth": {
+        "login": "Login",
+        "logout": "Logout",
+        "register": "Register",
+        "email": "Email",
+        "password": "Password",
+        "confirm_password": "Confirm Password",
+        "forgot_password": "Forgot your password?",
+        "reset_password": "Reset Password"
+    },
+    "properties": {
+        "title": "Properties",
+        "new_property": "New Property",
+        "edit_property": "Edit Property",
+        "delete_property": "Delete Property",
+        "address": "Address",
+        "price": "Price",
+        "square_meters": "Square Meters",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "description": "Description"
+    },
+    "tenants": {
+        "title": "Tenants",
+        "new_tenant": "New Tenant",
+        "edit_tenant": "Edit Tenant",
+        "delete_tenant": "Delete Tenant",
+        "name": "Name",
+        "phone": "Phone",
+        "email": "Email"
+    },
+    "maintenance": {
+        "title": "Maintenance",
+        "new_request": "New Request",
+        "edit_request": "Edit Request",
+        "delete_request": "Delete Request",
+        "description": "Description",
+        "priority": "Priority",
+        "status": "Status",
+        "created_at": "Created At",
+        "updated_at": "Last Updated"
+    },
+    "payments": {
+        "title": "Payments",
+        "new_payment": "New Payment",
+        "edit_payment": "Edit Payment",
+        "delete_payment": "Delete Payment",
+        "amount": "Amount",
+        "date": "Date",
+        "status": "Status",
+        "method": "Payment Method"
+    },
+    "reports": {
+        "title": "Reports",
+        "generate": "Generate Report",
+        "download": "Download",
+        "generated_at": "Generated at",
+        "property_summary": {
+            "title": "Property Summary",
+            "description": "Detailed summary of all properties"
+        },
+        "maintenance_summary": {
+            "title": "Maintenance Summary",
+            "description": "Summary of all maintenance requests"
+        },
+        "tenant_summary": {
+            "title": "Tenant Summary",
+            "description": "Summary of all tenants"
+        },
+        "payment_summary": {
+            "title": "Payment Summary",
+            "description": "Summary of all payments"
+        },
+        "occupancy_report": {
+            "title": "Occupancy Report",
+            "description": "Analysis of property occupancy"
+        },
+        "columns": {
+            "property_id": "Property ID",
+            "address": "Address",
+            "price": "Price",
+            "square_meters": "Square Meters",
+            "occupancy_rate": "Occupancy Rate",
+            "revenue_per_sqm": "Revenue per m²",
+            "tenant_name": "Tenant Name",
+            "payment_amount": "Payment Amount",
+            "payment_date": "Payment Date",
+            "maintenance_type": "Maintenance Type",
+            "maintenance_cost": "Maintenance Cost",
+            "status": "Status"
+        }
+    },
+    "notifications": {
+        "title": "Notifications",
+        "mark_as_read": "Mark as Read",
+        "mark_all_as_read": "Mark All as Read",
+        "no_notifications": "No notifications",
+        "maintenance_request": "New maintenance request",
+        "payment_reminder": "Payment reminder",
+        "contract_expiration": "Contract expiration",
+        "property_update": "Property update"
+    },
+    "errors": {
+        "required_field": "This field is required",
+        "invalid_email": "Invalid email address",
+        "invalid_phone": "Invalid phone number",
+        "passwords_dont_match": "Passwords don't match",
+        "server_error": "Server error",
+        "not_found": "Not found",
+        "unauthorized": "Unauthorized",
+        "forbidden": "Access denied"
+    }
+}

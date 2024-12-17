@@ -1,0 +1,130 @@
+{
+    "common": {
+        "yes": "Sí",
+        "no": "No",
+        "save": "Guardar",
+        "cancel": "Cancelar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "create": "Crear",
+        "search": "Buscar",
+        "filter": "Filtrar",
+        "loading": "Cargando...",
+        "error": "Error",
+        "success": "Éxito",
+        "warning": "Advertencia",
+        "info": "Información"
+    },
+    "auth": {
+        "login": "Iniciar sesión",
+        "logout": "Cerrar sesión",
+        "register": "Registrarse",
+        "email": "Correo electrónico",
+        "password": "Contraseña",
+        "confirm_password": "Confirmar contraseña",
+        "forgot_password": "¿Olvidaste tu contraseña?",
+        "reset_password": "Restablecer contraseña"
+    },
+    "properties": {
+        "title": "Propiedades",
+        "new_property": "Nueva propiedad",
+        "edit_property": "Editar propiedad",
+        "delete_property": "Eliminar propiedad",
+        "address": "Dirección",
+        "price": "Precio",
+        "square_meters": "Metros cuadrados",
+        "bedrooms": "Habitaciones",
+        "bathrooms": "Baños",
+        "description": "Descripción"
+    },
+    "tenants": {
+        "title": "Inquilinos",
+        "new_tenant": "Nuevo inquilino",
+        "edit_tenant": "Editar inquilino",
+        "delete_tenant": "Eliminar inquilino",
+        "name": "Nombre",
+        "phone": "Teléfono",
+        "email": "Correo electrónico"
+    },
+    "maintenance": {
+        "title": "Mantenimiento",
+        "new_request": "Nueva solicitud",
+        "edit_request": "Editar solicitud",
+        "delete_request": "Eliminar solicitud",
+        "description": "Descripción",
+        "priority": "Prioridad",
+        "status": "Estado",
+        "created_at": "Fecha de creación",
+        "updated_at": "Última actualización"
+    },
+    "payments": {
+        "title": "Pagos",
+        "new_payment": "Nuevo pago",
+        "edit_payment": "Editar pago",
+        "delete_payment": "Eliminar pago",
+        "amount": "Monto",
+        "date": "Fecha",
+        "status": "Estado",
+        "method": "Método de pago"
+    },
+    "reports": {
+        "title": "Reportes",
+        "generate": "Generar reporte",
+        "download": "Descargar",
+        "generated_at": "Generado el",
+        "property_summary": {
+            "title": "Resumen de Propiedades",
+            "description": "Resumen detallado de todas las propiedades"
+        },
+        "maintenance_summary": {
+            "title": "Resumen de Mantenimiento",
+            "description": "Resumen de todas las solicitudes de mantenimiento"
+        },
+        "tenant_summary": {
+            "title": "Resumen de Inquilinos",
+            "description": "Resumen de todos los inquilinos"
+        },
+        "payment_summary": {
+            "title": "Resumen de Pagos",
+            "description": "Resumen de todos los pagos"
+        },
+        "occupancy_report": {
+            "title": "Reporte de Ocupación",
+            "description": "Análisis de la ocupación de propiedades"
+        },
+        "columns": {
+            "property_id": "ID Propiedad",
+            "address": "Dirección",
+            "price": "Precio",
+            "square_meters": "Metros cuadrados",
+            "occupancy_rate": "Tasa de ocupación",
+            "revenue_per_sqm": "Ingresos por m²",
+            "tenant_name": "Nombre del inquilino",
+            "payment_amount": "Monto del pago",
+            "payment_date": "Fecha de pago",
+            "maintenance_type": "Tipo de mantenimiento",
+            "maintenance_cost": "Costo de mantenimiento",
+            "status": "Estado"
+        }
+    },
+    "notifications": {
+        "title": "Notificaciones",
+        "mark_as_read": "Marcar como leída",
+        "mark_all_as_read": "Marcar todas como leídas",
+        "no_notifications": "No hay notificaciones",
+        "maintenance_request": "Nueva solicitud de mantenimiento",
+        "payment_reminder": "Recordatorio de pago",
+        "contract_expiration": "Vencimiento de contrato",
+        "property_update": "Actualización de propiedad"
+    },
+    "errors": {
+        "required_field": "Este campo es requerido",
+        "invalid_email": "Correo electrónico inválido",
+        "invalid_phone": "Número de teléfono inválido",
+        "passwords_dont_match": "Las contraseñas no coinciden",
+        "server_error": "Error del servidor",
+        "not_found": "No encontrado",
+        "unauthorized": "No autorizado",
+        "forbidden": "Acceso denegado"
+    }
+}

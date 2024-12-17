@@ -1,0 +1,45 @@
+{
+  "theme": {
+    "colors": {
+      "primary": {
+        "main": "#1a73e8"
+      },
+      "success": {
+        "main": "#34a853"
+      },
+      "warning": {
+        "main": "#fbbc05"
+      },
+      "error": {
+        "main": "#ea4335"
+      },
+      "gray": {
+        "50": "#f8f9fa",
+        "100": "#f1f3f4"
+      }
+    },
+    "typography": {
+      "fontSize": "16px",
+      "fontFamily": "Google Sans, Roboto, sans-serif",
+      "headings": {
+        "fontFamily": "Google Sans, Roboto, sans-serif",
+        "fontWeight": "500"
+      }
+    },
+    "sidebar": {
+      "backgroundColor": "#ffffff",
+      "textColor": "#202124",
+      "activeTextColor": "#1a73e8",
+      "groupItems": {
+        "textTransform": "none"
+      }
+    },
+    "rightPanel": {
+      "backgroundColor": "#f8f9fa",
+      "textColor": "#202124"
+    },
+    "codeBlock": {
+      "backgroundColor": "#f1f3f4"
+    }
+  }
+}
