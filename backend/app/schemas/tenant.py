@@ -1,5 +1,5 @@
-from typing import Optional, List
-from datetime import date
+from typing import Optional
+from datetime import date, datetime
 from decimal import Decimal
 from pydantic import BaseModel, Field
 
@@ -42,14 +42,14 @@ class TenantDocument(TenantDocumentBase):
         from_attributes = True
 
 class TenantBase(BaseModel):
-    first_name: str = Field(..., min_length=1)
-    last_name: str = Field(..., min_length=1)
-    property_id: int = Field(...)
-    lease_start: date
-    lease_end: date
-    deposit: Decimal = Field(..., ge=0)
-    monthly_rent: Decimal = Field(..., ge=0)
-    payment_day: int = Field(..., ge=1, le=31)
+    first_name: str = Field(..., min_length=1, description="First name of the tenant")
+    last_name: str = Field(..., min_length=1, description="Last name of the tenant")
+    property_id: int = Field(..., description="ID of the property being rented")
+    lease_start: date = Field(..., description="Start date of the lease")
+    lease_end: date = Field(..., description="End date of the lease")
+    deposit: Decimal = Field(..., ge=0, description="Security deposit amount")
+    monthly_rent: Decimal = Field(..., ge=0, description="Monthly rent amount")
+    payment_day: int = Field(..., ge=1, le=31, description="Day of the month when rent is due")
 
 class TenantCreate(TenantBase):
     pass
@@ -66,10 +66,8 @@ class TenantUpdate(BaseModel):
 
 class TenantResponse(TenantBase):
     id: int
-    created_at: date
-    updated_at: date
-    references: List[TenantReference] = []
-    documents: List[TenantDocument] = []
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

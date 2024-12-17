@@ -4,7 +4,7 @@ from sqlalchemy import and_, or_, func, select
 from typing import List, Optional, Dict, Any
 from datetime import date, datetime
 from ..models.property import Property, PropertyStatus, PropertyType
-from ..schemas.property import PropertyCreate, PropertyUpdate, PropertyWithUnits
+from ..schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse, PropertyFilter
 from fastapi import HTTPException, status
 
 class PropertyService:
@@ -19,51 +19,49 @@ class PropertyService:
         filters: Optional[Dict[str, Any]] = None
     ) -> List[Property]:
         """
-        Obtiene una lista de propiedades con filtros opcionales
+        Get a list of properties with optional filtering
         """
-        query = select(Property).where(Property.is_active == True)
+        query = select(Property)
         
+        # Aplicar filtros base
         if user_id:
             query = query.where(Property.user_id == user_id)
-        
+            
         if filters:
-            conditions = []
-            if 'status' in filters:
-                try:
-                    status_enum = PropertyStatus(filters['status'].lower())
-                    conditions.append(Property.status == status_enum)
-                except ValueError:
-                    raise HTTPException(
-                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail=f"Invalid status value. Must be one of: {[s.value for s in PropertyStatus]}"
-                    )
-            if 'city' in filters:
-                conditions.append(Property.city.ilike(f"%{filters['city']}%"))
-            if 'min_price' in filters:
-                conditions.append(Property.monthly_rent >= filters['min_price'])
-            if 'max_price' in filters:
-                conditions.append(Property.monthly_rent <= filters['max_price'])
-            if 'bedrooms' in filters:
-                conditions.append(Property.bedrooms >= filters['bedrooms'])
-            if 'bathrooms' in filters:
-                conditions.append(Property.bathrooms >= filters['bathrooms'])
-            if conditions:
-                query = query.where(and_(*conditions))
+            for field, value in filters.items():
+                if value is not None:
+                    if field == 'city':
+                        query = query.where(Property.city.ilike(f"%{value}%"))
+                    elif field == 'state':
+                        query = query.where(Property.state.ilike(f"%{value}%"))
+                    elif field == 'status':
+                        query = query.where(Property.status == value)
+                    elif field == 'property_type':
+                        query = query.where(Property.property_type == value)
+                    elif field == 'bedrooms':
+                        query = query.where(Property.bedrooms == value)
+                    elif field == 'bathrooms':
+                        query = query.where(Property.bathrooms == value)
+                    elif field == 'parent_property_id':
+                        query = query.where(Property.parent_property_id == value)
+                    else:
+                        query = query.where(getattr(Property, field) == value)
         
+        # Aplicar paginación
         query = query.offset(skip).limit(limit)
+        
+        # Ejecutar consulta
         result = await self.db.execute(query)
         return result.scalars().all()
 
-    async def get_property(self, property_id: int) -> Optional[Property]:
+    async def get_property(self, property_id: int, user_id: str | None = None) -> Property:
         """
-        Obtiene una propiedad por su ID
+        Get a single property by ID
         """
-        query = select(Property).where(
-            and_(
-                Property.id == property_id,
-                Property.is_active == True
-            )
-        )
+        query = select(Property).where(Property.id == property_id)
+        if user_id:
+            query = query.where(Property.user_id == user_id)
+            
         result = await self.db.execute(query)
         property = result.scalar_one_or_none()
         
@@ -72,311 +70,143 @@ class PropertyService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Property with id {property_id} not found"
             )
+            
         return property
 
     async def create_property(self, property_data: PropertyCreate, user_id: str) -> Property:
         """
-        Crea una nueva propiedad
+        Create a new property
         """
-        # Validar tipo de propiedad y relaciones
-        if property_data.property_type == PropertyType.UNIT:
-            if not property_data.parent_property_id:
+        # Validar que si es una unidad, tenga parent_property_id
+        if property_data.property_type == PropertyType.UNIT.value and not property_data.parent_property_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Units must have a parent property"
+            )
+            
+        # Validar que si tiene parent_property_id, el parent exista y sea PRINCIPAL
+        if property_data.parent_property_id:
+            parent = await self.get_property(property_data.parent_property_id)
+            if parent.property_type != PropertyType.PRINCIPAL.value:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Units must have a parent property"
+                    detail="Parent property must be of type PRINCIPAL"
                 )
-
-            # Verificar que el padre existe y es una propiedad principal
-            try:
-                parent = await self.get_property(property_data.parent_property_id)
-            except HTTPException as e:
-                if e.status_code == status.HTTP_404_NOT_FOUND:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Parent property with id {property_data.parent_property_id} not found"
-                    )
-                raise e
-
-            if parent.property_type != PropertyType.PRINCIPAL:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Units can only be created under principal properties"
-                )
-        
-        property_dict = property_data.model_dump()
-        property_dict["user_id"] = user_id
-        new_property = Property(**property_dict)
-        
-        self.db.add(new_property)
+                
+        # Crear la propiedad
+        db_property = Property(
+            **property_data.model_dump(),
+            user_id=user_id
+        )
+        self.db.add(db_property)
         await self.db.commit()
-        await self.db.refresh(new_property)
-        
-        return new_property
+        await self.db.refresh(db_property)
+        return db_property
 
     async def update_property(
         self,
         property_id: int,
-        property_update: PropertyUpdate
+        property_data: PropertyUpdate,
+        user_id: str | None = None
     ) -> Property:
         """
-        Actualiza una propiedad existente
+        Update a property
         """
-        property = await self.get_property(property_id)
+        # Obtener la propiedad existente
+        property = await self.get_property(property_id, user_id)
         
-        update_data = property_update.model_dump(exclude_unset=True)
-        
-        # Si se está actualizando el estado, validar el nuevo estado
-        if "status" in update_data:
-            try:
-                update_data["status"] = PropertyStatus(update_data["status"])
-            except ValueError:
+        # Validar cambios de tipo de propiedad
+        if property_data.property_type:
+            # Si cambia a UNIT, debe tener parent
+            if property_data.property_type == PropertyType.UNIT.value:
+                if not (property_data.parent_property_id or property.parent_property_id):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Units must have a parent property"
+                    )
+            # Si cambia a PRINCIPAL, no debe tener parent
+            elif property_data.property_type == PropertyType.PRINCIPAL.value:
+                property_data.parent_property_id = None
+                
+        # Validar parent_property_id si se proporciona
+        if property_data.parent_property_id:
+            parent = await self.get_property(property_data.parent_property_id)
+            if parent.property_type != PropertyType.PRINCIPAL.value:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=f"Invalid status value. Must be one of: {[s.value for s in PropertyStatus]}"
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Parent property must be of type PRINCIPAL"
                 )
-        
-        for key, value in update_data.items():
+                
+        # Actualizar la propiedad
+        property_data_dict = property_data.model_dump(exclude_unset=True)
+        for key, value in property_data_dict.items():
             setattr(property, key, value)
-        
-        await self.db.commit()
-        await self.db.refresh(property)
-        
-        return property
-
-    async def delete_property(self, property_id: int) -> bool:
-        """
-        Elimina una propiedad (soft delete)
-        """
-        property = await self.get_property(property_id)
-        
-        # Si es una propiedad principal, también desactivar sus unidades
-        if property.property_type == PropertyType.PRINCIPAL:
-            units_query = select(Property).where(
-                and_(
-                    Property.parent_property_id == property_id,
-                    Property.is_active == True
-                )
-            )
-            result = await self.db.execute(units_query)
-            units = result.scalars().all()
             
-            for unit in units:
-                unit.is_active = False
-        
-        property.is_active = False
-        await self.db.commit()
-        return True
-
-    async def get_property_metrics(self) -> Dict[str, Any]:
-        """
-        Obtiene métricas de las propiedades
-        """
-        # Total de propiedades activas
-        total_query = select(func.count(Property.id)).where(Property.is_active == True)
-        total_result = await self.db.execute(total_query)
-        total_properties = total_result.scalar()
-        
-        # Propiedades por estado
-        status_query = select(
-            Property.status,
-            func.count(Property.id)
-        ).where(
-            Property.is_active == True
-        ).group_by(Property.status)
-        status_result = await self.db.execute(status_query)
-        status_counts = {status: count for status, count in status_result}
-        
-        # Valor total de las propiedades
-        value_query = select(func.sum(Property.current_value)).where(Property.is_active == True)
-        value_result = await self.db.execute(value_query)
-        total_value = value_result.scalar() or 0
-        
-        return {
-            "total_properties": total_properties,
-            "status_distribution": status_counts,
-            "total_value": total_value
-        }
-
-    async def search_properties(
-        self,
-        search_term: str,
-        skip: int = 0,
-        limit: int = 100
-    ) -> List[Property]:
-        """
-        Búsqueda de propiedades por término
-        """
-        query = select(Property).where(
-            and_(
-                Property.is_active == True,
-                or_(
-                    Property.name.ilike(f"%{search_term}%"),
-                    Property.address.ilike(f"%{search_term}%"),
-                    Property.city.ilike(f"%{search_term}%"),
-                    Property.state.ilike(f"%{search_term}%"),
-                    Property.country.ilike(f"%{search_term}%")
-                )
-            )
-        ).offset(skip).limit(limit)
-        
-        result = await self.db.execute(query)
-        return result.scalars().all()
-
-    async def get_properties_by_status(
-        self,
-        status: PropertyStatus,
-        skip: int = 0,
-        limit: int = 100
-    ) -> List[Property]:
-        """
-        Obtiene propiedades por estado
-        """
-        query = select(Property).where(
-            and_(
-                Property.status == status,
-                Property.is_active == True
-            )
-        ).offset(skip).limit(limit)
-        
-        result = await self.db.execute(query)
-        return result.scalars().all()
-
-    async def update_property_status(
-        self,
-        property_id: int,
-        new_status: PropertyStatus
-    ) -> Property:
-        """
-        Actualiza el estado de una propiedad
-        """
-        property = await self.get_property(property_id)
-        
-        # Validar el nuevo estado
-        try:
-            status_enum = PropertyStatus(new_status)
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid status value. Must be one of: {[s.value for s in PropertyStatus]}"
-            )
-        
-        property.status = status_enum
         await self.db.commit()
         await self.db.refresh(property)
-        
         return property
 
-    async def bulk_update_properties(
-        self,
-        property_ids: List[int],
-        property_update: PropertyUpdate
-    ) -> List[Property]:
+    async def delete_property(self, property_id: int, user_id: str | None = None) -> Property:
         """
-        Updates multiple properties at once
+        Delete a property
         """
-        # Verificar que todas las propiedades existen
-        properties = []
-        for property_id in property_ids:
-            property = await self.get_property(property_id)
-            properties.append(property)
+        # Obtener la propiedad
+        property = await self.get_property(property_id, user_id)
         
-        update_data = property_update.model_dump(exclude_unset=True)
-        
-        # Si se está actualizando el estado, validar el nuevo estado
-        if "status" in update_data:
-            try:
-                update_data["status"] = PropertyStatus(update_data["status"])
-            except ValueError:
+        # Verificar que no tenga unidades si es PRINCIPAL
+        if property.property_type == PropertyType.PRINCIPAL.value:
+            units_query = select(Property).where(Property.parent_property_id == property_id)
+            result = await self.db.execute(units_query)
+            if result.first():
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=f"Invalid status value. Must be one of: {[s.value for s in PropertyStatus]}"
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot delete a principal property with units. Delete the units first."
                 )
         
-        # Actualizar cada propiedad
-        for property in properties:
-            for key, value in update_data.items():
-                setattr(property, key, value)
-        
+        # Eliminar la propiedad
+        await self.db.delete(property)
         await self.db.commit()
-        
-        # Refrescar todas las propiedades
-        for property in properties:
-            await self.db.refresh(property)
-        
-        return properties
+        return property
 
-    async def create_unit(
-        self,
-        principal_id: int,
-        unit_data: PropertyCreate,
-        user_id: str
-    ) -> Property:
+    async def get_units(self, property_id: int, user_id: str | None = None) -> List[Property]:
         """
-        Crea una nueva unidad asociada a una propiedad principal
+        Get all units for a principal property
         """
-        # Asegurarse de que la propiedad principal existe y es del tipo correcto
-        principal = await self.get_property(principal_id)
-        if principal.property_type != PropertyType.PRINCIPAL:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Units can only be created under principal properties"
-            )
-        
-        # Forzar el tipo de propiedad a UNIT y establecer el padre
-        unit_data.property_type = PropertyType.UNIT
-        unit_data.parent_property_id = principal_id
-        
-        # Crear la unidad
-        return await self.create_property(unit_data, user_id)
-
-    async def get_property_with_units(self, property_id: int) -> PropertyWithUnits:
-        """
-        Obtiene una propiedad con todas sus unidades
-        """
-        # Obtener la propiedad principal
-        property = await self.get_property(property_id)
+        # Verificar que la propiedad principal existe
+        property = await self.get_property(property_id, user_id)
         
         # Verificar que es una propiedad principal
-        if property.property_type != PropertyType.PRINCIPAL:
+        if property.property_type != PropertyType.PRINCIPAL.value:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only principal properties can have units"
+                detail="Can only get units for a principal property"
             )
-        
-        # Obtener las unidades asociadas
-        units_query = select(Property).where(
-            and_(
-                Property.parent_property_id == property_id,
-                Property.is_active == True
-            )
-        )
-        result = await self.db.execute(units_query)
-        units = result.scalars().all()
-        
-        # Crear y retornar el esquema PropertyWithUnits
-        return PropertyWithUnits(
-            **property.__dict__,
-            units=units
-        )
-
-    async def get_units_by_principal(self, principal_id: int) -> List[Property]:
-        """
-        Obtiene todas las unidades de una propiedad principal
-        """
-        # Verificar que la propiedad principal existe y es del tipo correcto
-        principal = await self.get_property(principal_id)
-        if principal.property_type != PropertyType.PRINCIPAL:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only principal properties can have units"
-            )
-        
+            
         # Obtener las unidades
-        query = select(Property).where(
-            and_(
-                Property.parent_property_id == principal_id,
-                Property.is_active == True
-            )
-        )
+        query = select(Property).where(Property.parent_property_id == property_id)
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    async def get_parent_property(self, property_id: int, user_id: str | None = None) -> Property:
+        """
+        Get the parent property of a unit
+        """
+        # Obtener la unidad
+        property = await self.get_property(property_id, user_id)
+        
+        # Verificar que es una unidad
+        if property.property_type != PropertyType.UNIT.value:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Can only get parent for a unit"
+            )
+            
+        # Verificar que tiene parent_property_id
+        if not property.parent_property_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Unit has no parent property"
+            )
+            
+        # Obtener la propiedad principal
+        return await self.get_property(property.parent_property_id, user_id)

@@ -20,8 +20,8 @@ load_dotenv()
 
 # Crear la aplicación FastAPI
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version="1.0.0",
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
     description="""
     # API de Gestión de Propiedades en Alquiler
 
@@ -31,25 +31,7 @@ app = FastAPI(
     * Gestión de inquilinos
     * Gestión de contratos
     * Gestión de pagos
-    * Reportes y análisis
-    
-    ## Características principales
-    
-    * Documentación interactiva
-    * Validación de datos
-    * Manejo de errores consistente
-    * Paginación y filtrado
-    * Monitoreo y logging
-    
-    ## Tecnologías utilizadas
-    
-    * FastAPI
-    * PostgreSQL
-    * SQLAlchemy
-    * Pydantic
-    * Redis
-    * Alembic
-    * OpenAPI (Swagger)
+    * Reportes y estadísticas
     """,
     terms_of_service="https://example.com/terms/",
     contact={
@@ -66,26 +48,26 @@ app = FastAPI(
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
 
-# Montar archivos estáticos
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
 # Configurar CORS
-origins = [
-    "http://localhost:3000",  # Frontend Next.js
-    "http://127.0.0.1:3000",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["http://localhost:3000"],  # Frontend URL
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["*"],  # Permite todos los métodos
+    allow_headers=["*"],  # Permite todos los headers
 )
 
-# Incluir todas las rutas bajo el prefijo /api/v1
+# Incluir rutas de la API
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Para debugging - imprimir todas las rutas registradas
+@app.on_event("startup")
+async def print_routes():
+    """Print all registered routes for debugging"""
+    print("\n=== Registered Routes ===")
+    for route in app.routes:
+        print(f"Route: {route.path}, Methods: {route.methods}")
+    print("=======================\n")
 
 def custom_openapi():
     if app.openapi_schema:
@@ -104,46 +86,41 @@ app.openapi = custom_openapi
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():
     return get_swagger_ui_html(
-        openapi_url=app.openapi_url,
-        title=f"{app.title} - Swagger UI",
+        openapi_url=f"{settings.API_V1_STR}/openapi.json",
+        title=f"{settings.APP_NAME} - Swagger UI",
         oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
-        swagger_js_url="/static/swagger-ui-bundle.js",
-        swagger_css_url="/static/swagger-ui.css",
-        swagger_favicon_url="/static/favicon.svg",
     )
 
-@app.get("/docs/oauth2-redirect", include_in_schema=False)
+@app.get(app.swagger_ui_oauth2_redirect_url, include_in_schema=False)
 async def swagger_ui_redirect():
     return get_swagger_ui_oauth2_redirect_html()
 
 @app.get("/redoc", include_in_schema=False)
 async def redoc_html():
     return get_redoc_html(
-        openapi_url=app.openapi_url,
-        title=f"{app.title} - ReDoc",
-        redoc_js_url="/static/redoc.standalone.js",
-        redoc_favicon_url="/static/favicon.svg",
-        with_google_fonts=False,
+        openapi_url=f"{settings.API_V1_STR}/openapi.json",
+        title=f"{settings.APP_NAME} - ReDoc",
     )
 
 @app.get("/")
 async def root():
     """
     Endpoint de salud para verificar que la API está funcionando
-    
+
     Returns:
         dict: Estado actual de la API
     """
     return {
-        "status": "ok",
-        "message": "API is running",
-        "timestamp": datetime.now().isoformat(),
-        "version": app.version
+        "name": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "environment": settings.ENVIRONMENT,
+        "status": "OK",
+        "timestamp": datetime.now().isoformat()
     }
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    return {"status": "OK"}
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -158,24 +135,22 @@ async def global_exception_handler(request: Request, exc: Exception):
         JSONResponse: Respuesta de error formateada
     """
     error_response = {
-        "status": "error",
-        "message": str(exc),
+        "detail": str(exc),
         "type": exc.__class__.__name__,
         "path": request.url.path
     }
     
-    if hasattr(exc, "status_code"):
-        status_code = exc.status_code
-    else:
-        status_code = 500
-        error_response["details"] = "Internal Server Error"
+    # Log the error here if needed
+    print(f"Error: {error_response}")
     
     return JSONResponse(
-        status_code=status_code,
+        status_code=500,
         content=error_response
     )
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize application resources"""
-    pass
+    # Initialize database
+    from app.core.database import init_db
+    await init_db()

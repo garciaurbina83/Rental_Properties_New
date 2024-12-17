@@ -3,6 +3,7 @@ Database configuration module
 """
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from typing import AsyncGenerator
 
 from ..core.config import settings
 
@@ -27,9 +28,24 @@ SessionLocal = sessionmaker(
 
 Base = declarative_base()
 
-async def get_db() -> AsyncSession:
+async def init_db() -> None:
+    """
+    Initialize database by creating all tables
+    """
+    # Import all models here to ensure they are registered with Base
+    # We import them here to avoid circular imports
+    from ..models.property import Property
+    from ..models.tenant import Tenant
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Get database session
     """
     async with SessionLocal() as session:
-        yield session
+        try:
+            yield session
+        finally:
+            await session.close()
